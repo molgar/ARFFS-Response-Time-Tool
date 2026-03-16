@@ -27,7 +27,7 @@ def show_osmnx_install_dialog(iface=None, parent=None):
         if iface is not None:
             try:
                 parent = iface.mainWindow()
-            except:
+            except Exception:
                 pass
 
         # If not obtained via iface, try via qgis.utils
@@ -36,7 +36,7 @@ def show_osmnx_install_dialog(iface=None, parent=None):
                 from qgis.utils import iface as qgis_iface
                 if qgis_iface:
                     parent = qgis_iface.mainWindow()
-            except:
+            except Exception:
                 pass
 
         # If still not obtained, try via QApplication
@@ -78,7 +78,7 @@ def show_osmnx_install_dialog(iface=None, parent=None):
                     "python -m pip install \"osmnx>=1.4,<2.0\" \"networkx>=2.6,<3.0\""
                 )
                 msg.exec_()
-        except:
+        except Exception:
             pass
         return 0
 
@@ -153,10 +153,10 @@ class OSMnxInstallDialog(QDialog):
                 "Restart QGIS after the installation completes."
             )
             self.accept()
-        except Exception as e:
+        except Exception:
             QMessageBox.critical(
                 self,
                 "Error",
-                f"Could not launch installation:\n{str(e)}\n\n"
+                "Could not launch installation.\n\n"
                 "Try running the bat file manually from OSGeo4W Shell."
             )
