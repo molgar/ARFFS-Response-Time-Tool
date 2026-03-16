@@ -456,7 +456,7 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
         for fld in layer.fields():
             if fld.type() == QVariant.String:
                 string_fields.append(fld.name())
-        preferred = ['name', 'station', 'station_name', 'Название', 'Наименование']
+        preferred = ['name', 'station', 'station_name']
         lower_map = {f.lower(): f for f in string_fields}
         for key in preferred:
             if key.lower() in lower_map:

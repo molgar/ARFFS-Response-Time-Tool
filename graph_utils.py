@@ -239,9 +239,9 @@ def build_graph_from_road_layer(
     # Look for a highway or equivalent field
     for i, field in enumerate(fields):
         field_lower = field.name().lower()
-        if field_lower in ['highway', 'road_type', 'type', 'тип', 'highway_type']:  # 'тип' = Russian GIS field name
+        if field_lower in ['highway', 'road_type', 'type', 'highway_type']:
             highway_field_idx = i
-        if field_lower in ['length', 'длина']:  # 'длина' = Russian GIS field name
+        if field_lower in ['length']:
             length_field_idx = i
 
     # Process all lines in the road layer
