@@ -1,5 +1,5 @@
 """
-Алгоритм для создания векторного слоя маршрутов времени прибытия
+Algorithm for creating a vector layer of response time routes
 """
 
 from qgis.core import (QgsProcessingAlgorithm, QgsProcessingParameterVectorLayer,
@@ -25,11 +25,11 @@ from ..graph_utils import (
 
 class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
     """
-    Алгоритм для создания векторного слоя маршрутов времени прибытия
-    между объектами и пожарными подразделениями
+    Algorithm for creating a vector layer of response time routes
+    between incident objects and fire stations
     """
 
-    # Константы параметров
+    # Parameter constants
     OBJECTS_LAYER = 'OBJECTS_LAYER'
     FIRE_STATIONS_LAYER = 'FIRE_STATIONS_LAYER'
     ROAD_LAYER = 'ROAD_LAYER'
@@ -40,104 +40,104 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
     OUTPUT_LAYER = 'OUTPUT_LAYER'
 
     def tr(self, string):
-        """Перевод строки"""
+        """Translate string"""
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        """Создание экземпляра алгоритма"""
+        """Create algorithm instance"""
         return ResponseTimeRoutesAlgorithm()
 
     def name(self):
-        """Имя алгоритма"""
+        """Algorithm name"""
         return 'response_time_routes'
 
     def displayName(self):
-        """Отображаемое имя алгоритма"""
-        return self.tr('Маршруты времени прибытия')
+        """Algorithm display name"""
+        return self.tr('Response Time Routes')
 
     def icon(self):
-        """Иконка алгоритма для панели инструментов Processing"""
+        """Algorithm icon for the Processing toolbar"""
         plugin_root = os.path.dirname(os.path.dirname(__file__))
         return QIcon(os.path.join(plugin_root, 'icons', 'response_time_routes_algorithm_icon.png'))
 
     def group(self):
-        """Группа алгоритма"""
+        """Algorithm group"""
         return self.tr('Fire Response Analysis')
 
     def groupId(self):
-        """ID группы алгоритма"""
+        """Algorithm group ID"""
         return 'fire_response_analysis'
 
     def shortHelpString(self):
-        """Краткая справка"""
+        """Short help text"""
         return self.tr(
-            "Этот алгоритм создает векторный слой маршрутов времени прибытия "
-            "между объектами и пожарными подразделениями."
+            "This algorithm creates a vector layer of response time routes "
+            "between incident objects and fire stations."
         )
 
     def initAlgorithm(self, config=None):
-        """Инициализация параметров алгоритма"""
-        
-        # Входной слой объектов
+        """Initialize algorithm parameters"""
+
+        # Input objects layer
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 self.OBJECTS_LAYER,
-                self.tr('Слой объектов'),
+                self.tr('Objects layer'),
                 [QgsProcessing.TypeVectorPoint, QgsProcessing.TypeVectorPolygon]
             )
         )
 
-        # Входной слой пожарных подразделений
+        # Input fire stations layer
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 self.FIRE_STATIONS_LAYER,
-                self.tr('Слой пожарных подразделений'),
+                self.tr('Fire stations layer'),
                 [QgsProcessing.TypeVectorPoint]
             )
         )
 
-        # Опциональный слой дорог (если не указан, будет использован OSM)
+        # Optional road network layer (if not provided, OSM will be used)
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 self.ROAD_LAYER,
-                self.tr('Слой дорожной сети (опционально)'),
+                self.tr('Road network layer (optional)'),
                 [QgsProcessing.TypeVectorLine],
                 optional=True
             )
         )
 
-        # Поле с названием подразделения определяется автоматически при выполнении
+        # Station name field is detected automatically during processing
 
-        # Средняя скорость движения (км/ч)
-        # Скорости по типам дорог приходят списком из 5 значений (км/ч) из диалога
+        # Average travel speed (km/h)
+        # Road-type speeds are passed from the dialog as a list of 5 values (km/h)
 
-        # Использование кеша графа
+        # Use graph cache
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.USE_CACHE,
-                self.tr('Использовать кеширование графа'),
-                options=[self.tr('Да'), self.tr('Нет')],
+                self.tr('Use graph caching'),
+                options=[self.tr('Yes'), self.tr('No')],
                 defaultValue=0
             )
         )
 
-        # Тип маршрутов
+        # Route type
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.ROUTE_TYPE,
-                self.tr('Тип маршрутов'),
-                options=[self.tr('Только к ближайшей станции'),
-                        self.tr('Ко всем станциям'),
-                        self.tr('Ко всем станциям в радиусе времени')],
+                self.tr('Route type'),
+                options=[self.tr('To nearest station only'),
+                        self.tr('To all stations'),
+                        self.tr('To all stations within time threshold')],
                 defaultValue=0
             )
         )
 
-        # Пороговое время для фильтрации (минуты)
+        # Time threshold for filtering (minutes)
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TIME_THRESHOLD,
-                self.tr('Пороговое время прибытия (минуты)'),
+                self.tr('Response time threshold (minutes)'),
                 type=QgsProcessingParameterNumber.Double,
                 minValue=1.0,
                 maxValue=300.0,
@@ -146,18 +146,18 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        # Выходной слой
+        # Output layer
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT_LAYER,
-                self.tr('Выходной слой маршрутов')
+                self.tr('Output routes layer')
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        """Основная логика обработки"""
-        
-        # Получение параметров
+        """Main processing logic"""
+
+        # Retrieve parameters
         objects_layer = self.parameterAsVectorLayer(parameters, self.OBJECTS_LAYER, context)
         fire_stations_layer = self.parameterAsVectorLayer(parameters, self.FIRE_STATIONS_LAYER, context)
         road_layer = self.parameterAsVectorLayer(parameters, self.ROAD_LAYER, context)
@@ -169,11 +169,11 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
 
         if objects_layer is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.OBJECTS_LAYER))
-        
+
         if fire_stations_layer is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.FIRE_STATIONS_LAYER))
 
-        # Создание полей выходного слоя
+        # Create output layer fields
         fields = QgsFields()
         fields.append(QgsField('object_id', QVariant.Int))
         fields.append(QgsField('station_name', QVariant.String))
@@ -190,68 +190,68 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_LAYER))
 
-        # Получение параметра кеширования
+        # Retrieve cache parameter
         use_cache = self.parameterAsInt(parameters, self.USE_CACHE, context) == 0
-        
-        # Построение графа дорог
+
+        # Build road graph
         if road_layer is not None:
-            feedback.pushInfo(self.tr('Построение графа из слоя дорог...'))
+            feedback.pushInfo(self.tr('Building graph from road layer...'))
         else:
-            # Проверка наличия osmnx только если слой дорог не указан
+            # Check for osmnx only if no road layer is provided
             try:
                 importlib.import_module('osmnx')
             except Exception as e:
-                # Показываем диалог установки
+                # Show installation dialog
                 import sys
                 import os
                 plugin_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
                 if plugin_dir not in sys.path:
                     sys.path.insert(0, plugin_dir)
-                
+
                 try:
                     from osmnx_checker import check_osmnx_available
-                    
+
                     if not check_osmnx_available():
-                        # Показываем сообщение с направлением на меню плагинов
+                        # Show message directing the user to the plugin menu
                         from qgis.PyQt.QtWidgets import QMessageBox
-                        
+
                         msg = QMessageBox()
-                        msg.setWindowTitle(self.tr("Библиотека OSMnx не установлена"))
+                        msg.setWindowTitle(self.tr("OSMnx library not installed"))
                         msg.setIcon(QMessageBox.Warning)
                         msg.setText(
-                            self.tr("Для работы алгоритма необходима библиотека OSMnx, которая не установлена.\n\n")
-                            + self.tr("Для установки библиотеки:\n")
-                            + self.tr("1. Перейдите в меню: Модули → Fire Analysis → Установка библиотек (OSMnx)\n")
-                            + self.tr("2. Следуйте инструкциям в открывшемся окне\n\n")
-                            + self.tr("Или укажите слой дорожной сети в параметрах алгоритма.")
+                            self.tr("The OSMnx library required by this algorithm is not installed.\n\n")
+                            + self.tr("To install the library:\n")
+                            + self.tr("1. Go to: Plugins → Fire Analysis → Install Libraries (OSMnx)\n")
+                            + self.tr("2. Follow the instructions in the dialog\n\n")
+                            + self.tr("Alternatively, specify a road network layer in the algorithm parameters.")
                         )
                         msg.setStandardButtons(QMessageBox.Ok)
-                        
+
                         try:
                             from qgis.utils import iface
                             if iface:
                                 msg.setParent(iface.mainWindow())
                         except:
                             pass
-                        
+
                         msg.exec_()
-                        
+
                         if not check_osmnx_available():
                             raise QgsProcessingException(
-                                self.tr("OSMnx недоступен и слой дорог не указан. "
-                                       "Установите osmnx через меню: Модули → Fire Analysis → Установка библиотек (OSMnx) "
-                                       "или укажите слой дорожной сети.")
+                                self.tr("OSMnx is unavailable and no road layer was provided. "
+                                       "Install osmnx via Plugins → Fire Analysis → Install Libraries (OSMnx) "
+                                       "or specify a road network layer.")
                             )
                 except ImportError:
                     raise QgsProcessingException(
-                        self.tr("OSMnx недоступен и слой дорог не указан. "
-                               "Установите osmnx (pip install osmnx) или укажите слой дорожной сети.")
+                        self.tr("OSMnx is unavailable and no road layer was provided. "
+                               "Install osmnx (pip install osmnx) or specify a road network layer.")
                     )
-            feedback.pushInfo(self.tr('Построение графа дорог OSM...'))
+            feedback.pushInfo(self.tr('Building OSM road graph...'))
 
         try:
             G, to_wgs, from_wgs = build_graph_for_layers(
-                objects_layer, 
+                objects_layer,
                 fire_stations_layer,
                 buffer_m=500.0,
                 road_layer=road_layer,
@@ -259,16 +259,16 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
             )
         except RuntimeError as e:
             raise QgsProcessingException(self.tr(str(e)))
-        
+
         set_graph_travel_times(G, speeds_kmh, kmh_to_mm)
 
-        # Подготовка данных станций
+        # Prepare station data
         station_name_field = self._detect_station_name_field(fire_stations_layer)
         fire_stations = list(fire_stations_layer.getFeatures())
 
-        # Обработка каждого объекта
+        # Process each incident object
         total_features = objects_layer.featureCount()
-        feedback.pushInfo(self.tr(f'Обработка {total_features} объектов...'))
+        feedback.pushInfo(self.tr(f'Processing {total_features} features...'))
 
         import networkx as nx
 
@@ -303,12 +303,12 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 break
 
-            # Получение геометрии объекта
+            # Get feature geometry
             obj_geometry = obj_feature.geometry()
             if obj_geometry.isEmpty():
                 continue
 
-            # Определение центра объекта
+            # Determine feature centroid
             if obj_geometry.type() == QgsWkbTypes.PointGeometry:
                 obj_point = obj_geometry.asPoint()
             else:
@@ -317,7 +317,7 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
             obj_id = obj_feature.id()
             obj_type = QgsWkbTypes.displayString(obj_geometry.wkbType())
 
-            # Поиск узла графа для объекта
+            # Find graph node for the incident object
             obj_wgs = to_wgs.transform(obj_point.x(), obj_point.y())
             try:
                 obj_node = find_nearest_node(G, obj_wgs.x(), obj_wgs.y())
@@ -326,7 +326,7 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
             except Exception:
                 continue
 
-            # Функция подсчёта маршрута и времени
+            # Function to compute route and travel time
             def compute_time_and_route(station_feature):
                 st_pt = station_feature.geometry().asPoint()
                 st_wgs = to_wgs.transform(st_pt.x(), st_pt.y())
@@ -342,7 +342,7 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
 
             routes_to_write = []  # (route_nodes, t_min, total_len, station)
 
-            if route_type == 0:  # Только ближайшая по времени
+            if route_type == 0:  # Nearest station only
                 best = (None, float('inf'), float('inf'), None)
                 for st in fire_stations:
                     route_nodes, t_min, total_len = compute_time_and_route(st)
@@ -350,25 +350,25 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
                         best = (route_nodes, t_min, total_len, st)
                 if best[0] is not None:
                     routes_to_write.append(best)
-            elif route_type == 1:  # Все станции
+            elif route_type == 1:  # All stations
                 for st in fire_stations:
                     route_nodes, t_min, total_len = compute_time_and_route(st)
                     if route_nodes is not None:
                         routes_to_write.append((route_nodes, t_min, total_len, st))
-            else:  # В пределах порога времени
+            else:  # Within time threshold
                 for st in fire_stations:
                     route_nodes, t_min, total_len = compute_time_and_route(st)
                     if route_nodes is not None and t_min <= time_threshold:
                         routes_to_write.append((route_nodes, t_min, total_len, st))
 
-            # Запись маршрутов
+            # Write routes
             for route_nodes, t_min, total_len, station in routes_to_write:
                 try:
                     st_name = station[station_name_field] if station_name_field else f"Station_{station.id()}"
                 except Exception:
                     st_name = f"Station_{station.id()}"
 
-                # Геометрия маршрута по узлам графа → CRS проекта
+                # Route geometry from graph nodes → project CRS
                 path_pts = []
                 for n in route_nodes:
                     lon = G.nodes[n].get('x')
@@ -390,13 +390,13 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
 
                 sink.addFeature(route_feature)
 
-            # Обновление прогресса
+            # Update progress
             feedback.setProgress(int(i / total_features * 100))
 
         return {self.OUTPUT_LAYER: dest_id}
 
     def _detect_station_name_field(self, layer):
-        """Определение подходящего строкового поля с названием подразделения"""
+        """Detect the appropriate string field for the station name"""
         if layer is None:
             return None
         string_fields = []
@@ -411,20 +411,20 @@ class ResponseTimeRoutesAlgorithm(QgsProcessingAlgorithm):
         return string_fields[0] if string_fields else None
 
     def find_nearest_station(self, point, stations, distance_calc):
-        """Поиск ближайшей пожарной станции"""
+        """Find the nearest fire station"""
         min_distance = float('inf')
         nearest_station = None
-        
+
         for station in stations:
             station_point = station.geometry().asPoint()
             distance = distance_calc.measureLine(point, station_point)
-            
+
             if distance < min_distance:
                 min_distance = distance
                 nearest_station = station
-                
+
         return nearest_station
 
     def tr(self, string):
-        """Перевод строки"""
+        """Translate string"""
         return QCoreApplication.translate('Processing', string)

@@ -9,8 +9,8 @@ completedColumns:
 
 ## Backlog
 
-- [Исправить-ошибку-сохранения-постоянного-слоя-в-arrival-time-calculator-py](tasks/Исправить-ошибку-сохранения-постоянного-слоя-в-arrival-time-calculator-py.md)
-- [Разработать-алгоритм-расчета-оптимальных-границ-районов-выезда](tasks/Разработать-алгоритм-расчета-оптимальных-границ-районов-выезда.md)
+- [Fix-persistent-layer-save-error-in-arrival-time-calculator-py](tasks/Fix-persistent-layer-save-error-in-arrival-time-calculator-py.md)
+- [Develop-algorithm-for-optimal-response-area-boundaries](tasks/Develop-algorithm-for-optimal-response-area-boundaries.md)
 
 ## Todo
 

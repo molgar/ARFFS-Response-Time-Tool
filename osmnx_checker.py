@@ -1,17 +1,17 @@
 """
-Утилита для проверки наличия библиотеки osmnx и предложения установки
+Utility for checking whether the osmnx library is available and offering to install it
 """
 
 import os
 import subprocess
 import sys
-from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
+from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                                  QLabel, QMessageBox)
 from qgis.PyQt.QtCore import Qt
 
 
 def check_osmnx_available():
-    """Проверяет наличие библиотеки osmnx"""
+    """Check whether the osmnx library is installed"""
     try:
         import osmnx
         return True
@@ -20,17 +20,17 @@ def check_osmnx_available():
 
 
 def show_osmnx_install_dialog(iface=None, parent=None):
-    """Показывает диалог с предложением установить osmnx"""
-    # Получаем родительское окно
+    """Show a dialog offering to install osmnx"""
+    # Obtain parent window
     if parent is None:
-        # Пытаемся получить через iface
+        # Try to get via iface
         if iface is not None:
             try:
                 parent = iface.mainWindow()
             except:
                 pass
-        
-        # Если не получили через iface, пытаемся через qgis.utils
+
+        # If not obtained via iface, try via qgis.utils
         if parent is None:
             try:
                 from qgis.utils import iface as qgis_iface
@@ -38,43 +38,43 @@ def show_osmnx_install_dialog(iface=None, parent=None):
                     parent = qgis_iface.mainWindow()
             except:
                 pass
-        
-        # Если все еще не получили, ищем через QApplication
+
+        # If still not obtained, try via QApplication
         if parent is None:
             try:
                 from qgis.PyQt.QtWidgets import QApplication
                 app = QApplication.instance()
                 if app:
-                    # Пытаемся найти главное окно QGIS
+                    # Try to find the main QGIS window
                     for widget in app.topLevelWidgets():
                         widget_name = getattr(widget, 'objectName', lambda: '')()
                         if widget_name == 'QgisApp' or 'QGIS' in str(type(widget)):
                             parent = widget
                             break
-                    # Если не нашли, берем активное окно
+                    # Fall back to active window
                     if parent is None:
                         parent = app.activeWindow()
             except Exception:
                 pass
-    
-    # Создаем и показываем диалог
+
+    # Create and show dialog
     try:
         dialog = OSMnxInstallDialog(iface, parent)
-        # Убеждаемся, что диалог виден
+        # Ensure the dialog is visible
         dialog.raise_()
         dialog.activateWindow()
         return dialog.exec_()
     except Exception as e:
-        # Если не удалось показать диалог, показываем простое сообщение
+        # If the dialog could not be shown, display a simple message
         try:
             from qgis.PyQt.QtWidgets import QMessageBox, QApplication
             app = QApplication.instance()
             if app:
                 msg = QMessageBox(parent)
-                msg.setWindowTitle("Установка библиотеки OSMnx")
+                msg.setWindowTitle("Install OSMnx Library")
                 msg.setText(
-                    "Для работы алгоритма необходима библиотека OSMnx.\n\n"
-                    "Установите её через OSGeo4W Shell:\n"
+                    "The OSMnx library is required by this algorithm.\n\n"
+                    "Install it via OSGeo4W Shell:\n"
                     "python -m pip install \"osmnx>=1.4,<2.0\" \"networkx>=2.6,<3.0\""
                 )
                 msg.exec_()
@@ -84,80 +84,79 @@ def show_osmnx_install_dialog(iface=None, parent=None):
 
 
 class OSMnxInstallDialog(QDialog):
-    """Диалог для предложения установки osmnx"""
-    
+    """Dialog for offering to install osmnx"""
+
     def __init__(self, iface=None, parent=None):
         super(OSMnxInstallDialog, self).__init__(parent)
         self.iface = iface
-        self.setWindowTitle("Установка библиотеки OSMnx")
+        self.setWindowTitle("Install OSMnx Library")
         self.setModal(True)
         self.resize(400, 150)
-        
-        # Устанавливаем флаги окна для правильного отображения
+
+        # Set window flags for correct display
         self.setWindowFlags(Qt.Dialog | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
-        
+
         self.setup_ui()
-    
+
     def setup_ui(self):
-        """Настройка пользовательского интерфейса"""
+        """Set up the user interface"""
         layout = QVBoxLayout()
-        
-        # Текст сообщения
+
+        # Message text
         message_label = QLabel(
-            "Для работы алгоритма необходима библиотека OSMnx, которая не установлена.\n\n"
-            "Желаете установить библиотеку?"
+            "The OSMnx library required by this algorithm is not installed.\n\n"
+            "Would you like to install it?"
         )
         message_label.setWordWrap(True)
         layout.addWidget(message_label)
-        
-        # Кнопки
+
+        # Buttons
         button_layout = QHBoxLayout()
-        
-        self.yes_button = QPushButton("Да")
+
+        self.yes_button = QPushButton("Yes")
         self.yes_button.clicked.connect(self.install_osmnx)
         button_layout.addWidget(self.yes_button)
-        
-        self.no_button = QPushButton("Нет")
+
+        self.no_button = QPushButton("No")
         self.no_button.clicked.connect(self.reject)
         button_layout.addWidget(self.no_button)
-        
+
         layout.addLayout(button_layout)
         self.setLayout(layout)
-    
+
     def install_osmnx(self):
-        """Запускает установку osmnx через bat-файл"""
-        # Получаем путь к директории плагина (где находится bat-файл)
+        """Launch osmnx installation via the bat file"""
+        # Get the plugin directory path (where the bat file is located)
         plugin_dir = os.path.dirname(os.path.abspath(__file__))
         bat_file = os.path.join(plugin_dir, 'install_osmnx.bat')
-        
+
         if not os.path.exists(bat_file):
             QMessageBox.warning(
                 self,
-                "Ошибка",
-                f"Файл установки не найден: {bat_file}\n\n"
-                "Пожалуйста, установите osmnx вручную."
+                "Error",
+                f"Installation file not found: {bat_file}\n\n"
+                "Please install osmnx manually."
             )
             return
-        
+
         try:
-            # Запускаем bat-файл в новом окне командной строки
-            # Используем cmd /c для запуска в отдельном окне
+            # Launch the bat file in a new command prompt window
+            # Use cmd /c to run in a separate window
             subprocess.Popen(
                 ['cmd', '/c', 'start', 'cmd', '/k', bat_file],
                 shell=False
             )
             QMessageBox.information(
                 self,
-                "Установка запущена",
-                "Установка osmnx запущена в отдельном окне командной строки.\n\n"
-                "После завершения установки перезапустите QGIS."
+                "Installation Started",
+                "OSMnx installation has been launched in a separate command prompt window.\n\n"
+                "Restart QGIS after the installation completes."
             )
             self.accept()
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Ошибка",
-                f"Не удалось запустить установку:\n{str(e)}\n\n"
-                "Попробуйте запустить bat-файл вручную из OSGeo4W Shell."
+                "Error",
+                f"Could not launch installation:\n{str(e)}\n\n"
+                "Try running the bat file manually from OSGeo4W Shell."
             )
-

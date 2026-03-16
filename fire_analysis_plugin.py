@@ -1,6 +1,6 @@
 """
 Fire Response Time Analysis Plugin
-Основной класс плагина для анализа времени прибытия пожарных подразделений
+Main plugin class for fire department response time analysis
 """
 
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
@@ -13,14 +13,14 @@ from .fire_response_analysis_provider import FireResponseAnalysisProvider
 
 
 class FireAnalysisPlugin:
-    """Основной класс плагина"""
+    """Main plugin class"""
 
     def __init__(self, iface):
-        """Инициализация плагина"""
+        """Initialize the plugin"""
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
-        
-        # Инициализация переводчика
+
+        # Initialize translator
         locale = QSettings().value('locale/userLocale')[0:2]
         locale_path = os.path.join(
             self.plugin_dir,
@@ -32,37 +32,37 @@ class FireAnalysisPlugin:
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
-        # Инициализация провайдера обработки
+        # Initialize processing provider
         self.provider = FireResponseAnalysisProvider()
-        
-        # Действие для меню плагинов
+
+        # Action for the plugin menu
         self.install_libs_action = None
 
     def initGui(self):
-        """Создание меню и панели инструментов"""
-        # Добавление провайдера обработки
+        """Create menu and toolbar"""
+        # Add processing provider
         QgsApplication.processingRegistry().addProvider(self.provider)
-        
-        # Создание действия для установки библиотек в меню плагинов
+
+        # Create action for library installation in the plugin menu
         self.install_libs_action = QAction(
             QIcon(os.path.join(self.plugin_dir, 'icons', 'icon.png')),
-            u"Установка библиотек (OSMnx)",
+            u"Install Libraries (OSMnx)",
             self.iface.mainWindow())
-        
+
         self.install_libs_action.triggered.connect(self.show_install_dialog)
         self.iface.addPluginToMenu(u"&Fire Analysis", self.install_libs_action)
 
     def unload(self):
-        """Удаление плагина"""
-        # Удаление провайдера обработки
+        """Unload the plugin"""
+        # Remove processing provider
         QgsApplication.processingRegistry().removeProvider(self.provider)
-        
-        # Удаление действия из меню
+
+        # Remove action from menu
         if self.install_libs_action:
             self.iface.removePluginMenu(u"&Fire Analysis", self.install_libs_action)
             self.install_libs_action = None
-    
+
     def show_install_dialog(self):
-        """Показывает диалог установки библиотек"""
+        """Show the library installation dialog"""
         from .osmnx_checker import show_osmnx_install_dialog
         show_osmnx_install_dialog(self.iface, self.iface.mainWindow())

@@ -1,8 +1,8 @@
 """
-Алгоритм определения первого прибывающего подразделения.
+First arriving unit determination algorithm.
 """
 
-__author__    = 'Малютин О.С.'
+__author__    = 'Malyutin O.S.'
 __date__      = '2025-12-09'
 __copyright__ = '(C) 2025 by SPSA'
 
@@ -37,24 +37,23 @@ except ImportError:
 
 class FirstArrivalUnitAlgorithm(QgsProcessingAlgorithm):
     """
-    Алгоритм определения первого прибывающего подразделения.
+    First arriving unit determination algorithm.
 
-    Принимает слой матрицы прибытия и слой подразделений.
-    На выходе создает новый слой застройки, в котором вместо
-    столбцов с временами прибытия всех подразделений,
-    добавлены два столбца: название первого прибывающего
-    подразделения и его время прибытия.
+    Accepts an arrival matrix layer and a units layer.
+    Produces a new buildings layer in which, instead of columns
+    with arrival times for all units, two columns are added:
+    the name of the first arriving unit and its arrival time.
     """
 
-    # Параметры входных данных
-    ARRIVAL_MATRIX   = 'ARRIVAL_MATRIX'        # Слой матрицы прибытия
-    FIRE_UNITS       = 'FIRE_UNITS'            # Слой подразделений
-    UNITS_NAME_FIELD = 'UNITS_NAME_FIELD'      # Поле названия подразделения
-    OUTPUT           = 'OUTPUT'                # Выходной слой
+    # Input parameters
+    ARRIVAL_MATRIX   = 'ARRIVAL_MATRIX'        # Arrival matrix layer
+    FIRE_UNITS       = 'FIRE_UNITS'            # Units layer
+    UNITS_NAME_FIELD = 'UNITS_NAME_FIELD'      # Unit name field
+    OUTPUT           = 'OUTPUT'                # Output layer
 
     def tr(self, string):
         """
-        Возвращает перевод для self.tr().
+        Returns a translation for self.tr().
         """
         return QCoreApplication.translate('Processing', string)
 
@@ -63,54 +62,54 @@ class FirstArrivalUnitAlgorithm(QgsProcessingAlgorithm):
 
     def name(self):
         """
-        Название алгоритма
+        Algorithm name
         """
         return 'first_arrival_unit'
 
     def displayName(self):
         """
-        Отображаемое название алгоритма
+        Algorithm display name
         """
-        return self.tr('Время прибытия первого подразделения')
+        return self.tr('First Arrival Unit Response Time')
 
     def group(self):
         """
-        Возвращает название группы, к которой принадлежит этот алгоритм.
+        Returns the name of the group this algorithm belongs to.
         """
-        return self.tr('2. Анализ прибытия')
+        return self.tr('2. Arrival Analysis')
 
     def groupId(self):
         """
-        Возвращает уникальный идентификатор группы, к которой принадлежит этот алгоритм.
+        Returns the unique identifier of the group this algorithm belongs to.
         """
         return 'ARRIVAL_ANALYSIS'
 
     def shortHelpString(self):
         """
-        Возвращает краткое описание алгоритма
+        Returns a short description of the algorithm
         """
         return self.tr("""
-            Алгоритм определения первого прибывающего подразделения пожарной охраны.
+            First arriving fire protection unit determination algorithm.
 
-            Принимает:
-            - Слой матрицы прибытия (полученный с помощью алгоритма "Матрица прибытия всех подразделений")
-            - Слой пожарных подразделений
+            Accepts:
+            - Arrival matrix layer (produced by the "Arrival Time Matrix for All Stations" algorithm)
+            - Fire units layer
 
-            Результат:
-            - Новый векторный слой застройки с двумя столбцами:
-              * "first_unit" - название первого прибывающего подразделения
-              * "first_time" - время прибытия первого подразделения
+            Output:
+            - New vector buildings layer with two columns:
+              * "first_unit" — name of the first arriving unit
+              * "first_time" — arrival time of the first unit
 
-            Алгоритм проходит по всем объектам в слое матрицы прибытия и для каждого
-            определяет подразделение с минимальным временем прибытия, исключая значения NULL/NaN.
+            The algorithm iterates over all features in the arrival matrix layer and for each
+            identifies the unit with the minimum arrival time, excluding NULL/NaN values.
 
-            Выходной файл сохраняется в формате Geopackage (.gpkg) и автоматически
-            добавляется на карту как новый слой.
+            The output file is saved in Geopackage format (.gpkg) and automatically
+            added to the map as a new layer.
         """)
 
     def icon(self):
         """
-        Возвращает иконку алгоритма
+        Returns the algorithm icon
         """
         cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
         icon_path = os.path.join(cmd_folder, '..', 'icons', 'nearest_fire_station_algorithm_icon.png')
@@ -122,112 +121,112 @@ class FirstArrivalUnitAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):
         """
-        Здесь указываются настройки алгоритма - входы и выходы.
+        Define algorithm settings — inputs and outputs.
         """
 
-        # Слой матрицы прибытия
+        # Arrival matrix layer
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.ARRIVAL_MATRIX,
-                self.tr('Слой матрицы прибытия'),
+                self.tr('Arrival matrix layer'),
                 [QgsProcessing.TypeVectorAnyGeometry],
-                defaultValue='Матрица прибытия',
+                defaultValue='Arrival Matrix',
                 optional=False
             )
         )
 
-        # Слой пожарных подразделений
+        # Fire units layer
         self.addParameter(QgsProcessingParameterFeatureSource(
             self.FIRE_UNITS,
-            self.tr('Слой пожарных подразделений'),
+            self.tr('Fire units layer'),
             [QgsProcessing.TypeVectorPoint],
-            defaultValue='Подразделения',
+            defaultValue='Units',
             optional=False
         ))
 
-        # Поле названия подразделения
+        # Unit name field
         self.addParameter(QgsProcessingParameterField(
             self.UNITS_NAME_FIELD,
-            self.tr('Поле названия подразделения'),
+            self.tr('Unit name field'),
             parentLayerParameterName=self.FIRE_UNITS,
             type=QgsProcessingParameterField.String,
             defaultValue='name',
             optional=False
         ))
 
-        # Выходной файл
+        # Output file
         self.addParameter(
             QgsProcessingParameterFileDestination(
                 self.OUTPUT,
-                self.tr('Первое прибывшее подразделение (новый слой)'),
-                'файл Geopackage (*.gpkg)',
+                self.tr('First arriving unit (new layer)'),
+                'Geopackage file (*.gpkg)',
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
         """
-        Основная логика алгоритма
+        Main algorithm logic
         """
 
-        # Проверяем доступность geopandas
+        # Check geopandas availability
         if not GPD_AVAILABLE:
             raise QgsProcessingException(
-                self.tr('Необходимо установить библиотеки: geopandas, pandas')
+                self.tr('Required libraries must be installed: geopandas, pandas')
             )
 
-        # Получаем входные параметры
+        # Retrieve input parameters
         arrival_matrix_source = self.parameterAsSource(parameters, self.ARRIVAL_MATRIX, context)
         fire_units_source     = self.parameterAsSource(parameters, self.FIRE_UNITS, context)
         units_name_field      = self.parameterAsString(parameters, self.UNITS_NAME_FIELD, context)
         output_file           = self.parameterAsFile(parameters, self.OUTPUT, context)
 
-        # Начинаем процесс обработки
-        feedback.setProgressText('Чтение входных данных...')
+        # Begin processing
+        feedback.setProgressText('Reading input data...')
         feedback.setProgress(5)
 
-        # Формируем слой подразделений
+        # Build units GeoDataFrame
         units_gdf = gpd.GeoDataFrame.from_features(
             list(fire_units_source.getFeatures()),
             crs=fire_units_source.sourceCrs().authid()
         )
 
-        # Загружаем слой матрицы прибытия в GeoDataFrame
+        # Load arrival matrix layer into GeoDataFrame
         arrival_gdf = gpd.GeoDataFrame.from_features(
             list(arrival_matrix_source.getFeatures()),
             crs=arrival_matrix_source.sourceCrs().authid()
         )
 
         feedback.setProgress(80)
-        feedback.setProgressText('Обработка матрицы прибытия...')
+        feedback.setProgressText('Processing arrival matrix...')
 
-        # Определяем столбцы, содержащие времена прибытия
+        # Identify columns containing arrival times
         units_names = list(units_gdf[units_name_field].unique())
 
-        # Вычисляем времена и подразделения
+        # Compute times and units
         first_time = arrival_gdf[units_names].min(axis=1)
         first_unit = arrival_gdf[units_names].idxmin(axis=1)
 
-        # Присваиваем результаты новым столбцам
+        # Assign results to new columns
         arrival_gdf['first_unit'] = first_unit
         arrival_gdf['first_time'] = first_time
-        feedback.pushDebugInfo('Добавлено поле "first_unit" содержащее название первого прибывшего подразделения')
-        feedback.pushDebugInfo('Добавлено поле "first_time" содержащее время прибытия первого подразделения')
-        feedback.pushDebugInfo('Поля времен прибытия подразделений удалены.')
+        feedback.pushDebugInfo('Added field "first_unit" containing the name of the first arriving unit')
+        feedback.pushDebugInfo('Added field "first_time" containing the arrival time of the first unit')
+        feedback.pushDebugInfo('Unit arrival time columns removed.')
 
-        # Удаляем колонки с временами прибытия
+        # Drop arrival time columns
         arrival_gdf = arrival_gdf.drop(columns=units_names)
         feedback.setProgress(95)
 
-        # Сохраняем результат в выходной файл
-        feedback.setProgressText('Сохранение результата...')
+        # Save result to output file
+        feedback.setProgressText('Saving result...')
         arrival_gdf.to_file(output_file)
 
-        # Добавляем полученный слой на карту
-        result_layer = QgsVectorLayer(output_file, 'Первое прибывшее подразделение', 'ogr')
+        # Add resulting layer to the map
+        result_layer = QgsVectorLayer(output_file, 'First Arriving Unit', 'ogr')
         if result_layer.isValid():
             QgsProject.instance().addMapLayer(result_layer)
 
         feedback.setProgress(100)
-        feedback.setProgressText('Готово!')
+        feedback.setProgressText('Done!')
 
         return {self.OUTPUT: output_file}
