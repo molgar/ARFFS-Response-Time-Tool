@@ -1,5 +1,5 @@
 """
-Провайдер алгоритмов обработки для анализа времени прибытия пожарных подразделений
+Processing algorithms provider for fire department response time analysis
 """
 
 from qgis.core import QgsProcessingProvider
@@ -14,29 +14,29 @@ from .algorithms.first_arrival_unit import FirstArrivalUnitAlgorithm
 
 
 class FireResponseAnalysisProvider(QgsProcessingProvider):
-    """Провайдер алгоритмов для анализа пожарных подразделений"""
+    """Processing algorithms provider for fire response analysis"""
 
     def __init__(self):
         super().__init__()
 
     def id(self):
-        """Уникальный идентификатор провайдера"""
+        """Unique provider identifier"""
         return 'fire_response_analysis'
 
     def name(self):
-        """Название провайдера"""
+        """Provider name"""
         return 'Fire Response Time Analysis'
 
     def icon(self):
-        """Иконка провайдера"""
+        """Provider icon"""
         return QIcon(os.path.join(os.path.dirname(__file__), 'icons', 'icon.png'))
 
     def longName(self):
-        """Полное название провайдера"""
+        """Full provider name"""
         return 'Fire Response Time Analysis'
 
     def loadAlgorithms(self):
-        """Загрузка всех алгоритмов"""
+        """Load all algorithms"""
         self.addAlgorithm(NearestFireStationAlgorithm())
         self.addAlgorithm(ResponseTimeRoutesAlgorithm())
         self.addAlgorithm(AllStationsResponseAlgorithm())
@@ -44,13 +44,13 @@ class FireResponseAnalysisProvider(QgsProcessingProvider):
         self.addAlgorithm(FirstArrivalUnitAlgorithm())
 
     def supportedOutputTableExtensions(self):
-        """Поддерживаемые форматы таблиц"""
+        """Supported table output formats"""
         return ['csv', 'xlsx']
 
     def supportedOutputRasterLayerExtensions(self):
-        """Поддерживаемые форматы растровых слоев"""
+        """Supported raster layer output formats"""
         return ['tif', 'tiff']
 
     def supportedOutputVectorLayerExtensions(self):
-        """Поддерживаемые форматы векторных слоев"""
+        """Supported vector layer output formats"""
         return ['shp', 'gpkg', 'geojson', 'kml']

@@ -1,5 +1,5 @@
 '''
-Дополнительные функции для работы с графами
+Additional utility functions for working with graphs
 '''
 
 import os
@@ -31,83 +31,83 @@ def get_graph_from_layer(pre_gds_file,
                          network,
                          feedback,
                          oneway_field_name: str = 'oneway',
-                         # lanes_field_name: str = 'lanes',  # Сейчас не реализовано
+                         # lanes_field_name: str = 'lanes',  # Not implemented yet
                          reversed_field_name: str = 'reversed',
                          ):
     """
-    Формирует или загружает граф дорожной сети.
+    Build or load a road network graph.
 
-    Функция проверяет наличие предварительно сохраненного файла ГДС (GraphML).
-    Если файл существует, он загружается. В противном случае создается новый
-    граф на основе данных из слоя дорожной сети.
+    The function checks for a pre-saved graph file (GraphML).
+    If the file exists, it is loaded. Otherwise, a new graph
+    is constructed from the road network layer data.
 
-    Параметры:
+    Parameters:
     ----------
     pre_gds_file : str
-        Путь к файлу GraphML с предварительно скомпилированным графом.
-    
-    network : QgsVectorLayer
-        Векторный слой, содержащий данные дорожной сети.
-    
-    feedback : QgsProcessingFeedback
-        Объект обратной связи для отображения прогресса и сообщений.
+        Path to the GraphML file containing a pre-compiled graph.
 
-    Возвращает:
+    network : QgsVectorLayer
+        Vector layer containing road network data.
+
+    feedback : QgsProcessingFeedback
+        Feedback object for displaying progress and messages.
+
+    Returns:
     ----------
     G : networkx.MultiDiGraph
-        Граф дорожной сети.
+        Road network graph.
 
-    Исключения:
+    Raises:
     -----------
     QgsProcessingException
-        Выбрасывается, если в слое дорожной сети отсутствуют необходимые атрибуты.
+        Raised if required attributes are missing from the road network layer.
     """
     if check_file_exists(pre_gds_file):
-        # Загружаем граф
+        # Load pre-compiled graph
         if not OSMNX_AVAILABLE:
             raise QgsProcessingException(
-                'Для загрузки предварительно скомпилированного графа необходим osmnx. '
-                'Установите osmnx или используйте слой дорог для построения графа.'
+                'osmnx is required to load a pre-compiled graph. '
+                'Install osmnx or use a road layer to build the graph.'
             )
-        feedback.pushDebugInfo('Используем предварительно скомпилированный ГДС')
-        feedback.setProgressText('Загружаем граф дорожной сети')
+        feedback.pushDebugInfo('Loading pre-compiled road graph')
+        feedback.setProgressText('Loading road network graph')
         G = ox.load_graphml(pre_gds_file)
         roads_gdf = ox.graph_to_gdfs(G, nodes=False)
     else:
-        # Формируем граф дорожной сети
+        # Build road network graph from layer
         if not GPD_AVAILABLE:
             raise QgsProcessingException(
-                'Для построения графа из слоя дорог необходим geopandas. '
-                'Установите geopandas: pip install geopandas'
+                'geopandas is required to build a graph from a road layer. '
+                'Install geopandas: pip install geopandas'
             )
-        feedback.setProgressText('Формируем граф дорожной сети')
+        feedback.setProgressText('Building road network graph')
 
-        # Загружаем данные из слоя дорог
+        # Load data from road layer
         roads_gdf = gpd.GeoDataFrame.from_features(list(network.getFeatures()), crs=network.sourceCrs().authid())
 
-        # Приводим названия колонок к нижнему регистру
+        # Normalise column names to lowercase
         columns_names_lower = {col: str.lower(col) for col in roads_gdf.columns}
         roads_gdf.rename(columns=columns_names_lower, inplace=True)
 
-        ## Проверяем наличие нужных полей
+        ## Check for required fields
         if not oneway_field_name in roads_gdf.columns:
-            feedback.pushWarning(f'Поле "{oneway_field_name}" отсутствует в списке полей входящего слоя дорожной сети!'
-                ' Полученный граф не будет учитывать направления движения по дорогам!'
+            feedback.pushWarning(f'Field "{oneway_field_name}" is missing from the road network layer!'
+                ' The resulting graph will not account for one-way traffic directions!'
                                 )
         if not reversed_field_name in roads_gdf.columns:
-            feedback.pushWarning(f'Поле {reversed_field_name} отсутствует в списке полей входящего слоя дорожной сети!'
-                ' Полученный граф может содержать ошибки направления движения техники!'
+            feedback.pushWarning(f'Field "{reversed_field_name}" is missing from the road network layer!'
+                ' The resulting graph may contain incorrect traffic direction errors!'
                                 )
-        ## Получаем все поля из слоя дорог, за исключением полей 'geometry' и полей ключей
-        ## ВАЖНО! Также удаляем поле 'length', так как оно пересчитывается в функции graph_rise_from_gpkg
+        ## Get all fields from the road layer, excluding 'geometry' and key fields
+        ## IMPORTANT: also remove the 'length' field as it is recalculated in graph_rise_from_gpkg
         key_fields = ['u', 'v', 'key', 'osmid', 'length']
         columns_list = [col for col in roads_gdf.columns if col not in key_fields]
-        
-        ## Реконструкция графа
+
+        ## Reconstruct graph
         G = graph_rise_from_gpkg(roads_gdf[columns_list],
                                 oneway_field_name = oneway_field_name,
-                                # lanes_field_name: str = 'lanes',  # Сейчас не реализовано
+                                # lanes_field_name: str = 'lanes',  # Not implemented yet
                                 reversed_field_name = reversed_field_name,
                                 )
-        
+
     return G

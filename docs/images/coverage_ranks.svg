@@ -10,21 +10,21 @@
   </defs>
 
   <rect class="box" x="40" y="30" width="880" height="60" rx="8"/>
-  <text x="60" y="60" class="title">Критерии покрытия (first_arrival_min)</text>
+  <text x="60" y="60" class="title">Coverage criteria (first_arrival_min)</text>
 
   <rect class="box" x="40" y="110" width="200" height="80" rx="8"/>
-  <text x="60" y="150" class="text">≤ 5 мин — Отличное</text>
+  <text x="60" y="150" class="text">≤ 5 min — Excellent</text>
 
   <rect class="box" x="260" y="110" width="200" height="80" rx="8"/>
-  <text x="280" y="150" class="text">≤ 10 мин — Хорошее</text>
+  <text x="280" y="150" class="text">≤ 10 min — Good</text>
 
   <rect class="box" x="480" y="110" width="200" height="80" rx="8"/>
-  <text x="500" y="146" class="text">≤ 20 мин —</text>
-  <text x="500" y="166" class="text">Удовлетворительное</text>
+  <text x="500" y="146" class="text">≤ 20 min —</text>
+  <text x="500" y="166" class="text">Satisfactory</text>
 
   <rect class="box" x="700" y="110" width="220" height="80" rx="8"/>
-  <text x="720" y="146" class="text">> 20 мин —</text>
-  <text x="720" y="166" class="text">Неудовлетворительное</text>
+  <text x="720" y="146" class="text">> 20 min —</text>
+  <text x="720" y="166" class="text">Unsatisfactory</text>
 </svg>
 
 

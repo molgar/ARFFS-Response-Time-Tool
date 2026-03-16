@@ -10,7 +10,7 @@
     <img src="docs/images/btn_download.svg" alt="Download" />
   </a>
   &nbsp;
-  <a href="#использование">
+  <a href="#usage">
     <img src="docs/images/btn_docs.svg" alt="Docs" />
   </a>
   &nbsp;
@@ -19,134 +19,134 @@
   </a>
 </p>
 
-Плагин для QGIS 3.x для анализа времени прибытия пожарных подразделений: определение ближайшей части по времени, построение маршрутов по графу OSM и оценка покрытия по рангам пожара.
+A QGIS 3.x plugin for fire response time analysis: identifying the nearest fire station by travel time, generating OSM-based routes, and evaluating coverage based on fire incident ranks.
 
 <p align="center">
-  <img src="docs/images/feature_cards.svg" alt="Ключевые возможности" width="100%" />
+  <img src="docs/images/feature_cards.svg" alt="Key Features" width="100%" />
 </p>
 
-### Возможности
-- **Ближайшее подразделение (nearest_fire_station)**: 
-  - Определяет ближайшую пожарную часть по кратчайшему времени следования по дорожному графу OSM.
-  - Выходные атрибуты: `nearest_station`, `distance_km`, `response_time_min`, `station_x`, `station_y` + атрибуты исходного объекта.
-- **Маршруты времени прибытия (response_time_routes)**:
-  - Генерация линейных маршрутов на дорожном графе OSM между объектами и подразделениями.
-  - Режимы: только к ближайшей; ко всем; ко всем в пределах порога времени.
-  - Выходные атрибуты: `object_id`, `station_name`, `distance_km`, `response_time_min`, `object_type`, `route_type`.
-- **Анализ всех подразделений по рангам (all_stations_response)**:
-  - Оценка времени прибытия нескольких подразделений в зависимости от ранга пожара (1–5) и лимита их количества.
-  - Считает `first_arrival_min`, `last_arrival_min`, `avg_arrival_min`, формирует `station_list` и оценку `response_coverage`.
+### Features
+- **Nearest Fire Station (nearest_fire_station)**:
+  - Identifies the nearest fire station based on the shortest travel time over the OSM road network.
+  - Output attributes: `nearest_station`, `distance_km`, `response_time_min`, `station_x`, `station_y` + original object attributes.
+- **Response Time Routes (response_time_routes)**:
+  - Generates linear routes on the OSM road graph between incident locations and fire stations.
+  - Modes: to the nearest station only; to all stations; to all stations within a specified time threshold.
+  - Output attributes: `object_id`, `station_name`, `distance_km`, `response_time_min`, `object_type`, `route_type`.
+- **All Stations Response by Fire Rank (all_stations_response)**:
+  - Evaluates response times from multiple fire stations based on fire rank (1–5) and a configurable station limit.
+  - Calculates `first_arrival_min`, `last_arrival_min`, `avg_arrival_min`, generates a `station_list`, and provides a `response_coverage` assessment.
 
-### Как это работает
-- Внутри используется модуль `graph_utils.py` для:
-  - построения дорожного графа OSM по экстенту ваших слоёв (с небольшим буфером),
-  - назначения скоростей движения по типам дорог и расчёта времени следования на рёбрах,
-  - конвертации скоростей из км/ч в м/мин.
-- Алгоритмы автоматически определяют текстовое поле названия подразделения в слое станций.
-- Поддерживается работа в системе координат проекта: геометрии маршрутов преобразуются из/в WGS84 автоматически.
+### How It Works
+- Internally uses the `graph_utils.py` module to:
+  - Build an OSM road graph based on the extent of your input layers (with a small buffer),
+  - Assign travel speeds by road type and compute travel time on graph edges,
+  - Convert speeds from km/h to m/min.
+- Algorithms automatically detect the station name field in the fire stations layer.
+- Supports project coordinate reference systems (CRS): route geometries are automatically converted to/from WGS84.
 
 <details>
-<summary>Скоростной профиль и граф OSM</summary>
+<summary>Speed Profile and OSM Graph</summary>
 
-- `graph_utils.py` строит дорожный граф по экстенту входных слоёв с буфером.
-- Функция `set_graph_travel_times` проставляет скорости и поле `travel_time` на рёбрах.
-- Скорости по умолчанию заданы для групп `highway`‑тегов (см. таблицу ниже).
+- `graph_utils.py` constructs the road graph from the input layer extents with a buffer.
+- The `set_graph_travel_times` function assigns speeds and populates the `travel_time` attribute on edges.
+- Default speeds are defined for groups of OSM `highway` tags (see table below).
 
 </details>
 
 <p align="center">
-  <img src="docs/images/overview.svg" alt="Общая схема работы плагина" width="860" />
+  <img src="docs/images/overview.svg" alt="Plugin Workflow Overview" width="860" />
   <br/>
-  <sub>Входные слои → OSM‑граф → алгоритмы → выходные слои</sub>
+  <sub>Input layers → OSM graph → algorithms → output layers</sub>
 </p>
 
-### Требования
+### Requirements
 - QGIS: 3.16 – 3.99
-- Интернет-доступ (для получения графа дорог OSM через OSMnx)
-- Зависимости Python в среде QGIS: `osmnx`, `networkx` (обычно `shapely` уже присутствует с QGIS)
+- Internet access (required to fetch OSM road graph via OSMnx)
+- Python dependencies in the QGIS environment: `osmnx`, `networkx` (usually `shapely` is already included with QGIS)
 
-### Установка зависимостей (Windows, OSGeo4W/QGIS)
-1) Откройте «OSGeo4W Shell» (или «QGIS Python Console»).  
-2) Установите пакеты (при необходимости укажите версии, совместимые с вашей сборкой QGIS/Python):
+### Installing Dependencies (Windows, OSGeo4W/QGIS)
+1) Open the **OSGeo4W Shell** (or **QGIS Python Console**).
+2) Install the packages (specify versions compatible with your QGIS/Python build if needed):
 
 ```bash
 python -m pip install --upgrade pip
 python -m pip install "osmnx>=1.4,<2.0" "networkx>=2.6,<3.0"
-# При проблемах совместимости попробуйте закрепить версии:
+# If compatibility issues arise, try pinning versions:
 # python -m pip install osmnx==1.6.0 networkx==2.8.8
 ```
 
-Если используете прокси/корпоративную сеть, добавьте ключи `--proxy` или предварительно настройте переменные окружения.
+If you're behind a proxy or on a corporate network, add `--proxy` flags or configure environment variables beforehand.
 
-### Установка плагина
-- Скопируйте папку плагина `fire_analysis_plugin` в каталог профиля QGIS плагинов.  
-  Пример (Windows): 
+### Plugin Installation
+- Copy the plugin folder `fire_analysis_plugin` into your QGIS profile plugins directory.
+  Example (Windows):
   - `C:\Users\<USER>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\fire_analysis_plugin`
-- Перезапустите QGIS и активируйте плагин в «Управлении и установке модулей».
+- Restart QGIS and enable the plugin via **Plugins → Manage and Install Plugins**.
 
-### Использование
-1) Загрузите в проект слой объектов (точки/полигоны) и слой пожарных подразделений (точки).
-2) Откройте «Processing Toolbox» → группа `Fire Response Analysis`.
-3) Запустите нужный алгоритм и задайте параметры:
-   - `Слой объектов`, `Слой пожарных подразделений` — входные данные.
-   - `Средние скорости/Профиль скоростей` — опционально, иначе используются значения по умолчанию.
-   - Для маршрутов: выберите режим и при необходимости порог времени.
-4) Сохраните выходной слой (точечный/полигональный для ближайшей станции; линейный для маршрутов; тип геометрии как у объектов — для анализа всех подразделений).
+### Usage
+1) Load into your project an incident layer (points/polygons) and a fire stations layer (points).
+2) Open **Processing Toolbox** → group `Fire Response Analysis`.
+3) Run the desired algorithm and configure parameters:
+   - `Incident layer`, `Fire stations layer` — input data.
+   - `Average speeds / Speed profile` — optional; defaults are used if not provided.
+   - For routes: choose a mode and, if applicable, set a time threshold.
+4) Save the output layer (point/polygon for nearest station; line for routes; same geometry type as input for all-stations-by-rank analysis).
 
 <p align="center">
-  <img src="docs/images/steps_pipeline.svg" alt="Шаги выполнения" width="100%" />
+  <img src="docs/images/steps_pipeline.svg" alt="Execution Steps" width="100%" />
 </p>
 
-#### Режимы построения маршрутов
+#### Route Generation Modes
 <p>
-  <img src="docs/images/routes_modes.svg" alt="Режимы построения маршрутов" width="820" />
+  <img src="docs/images/routes_modes.svg" alt="Route Generation Modes" width="820" />
 </p>
 
-### Профиль скоростей по умолчанию (км/ч)
-- **1**: Магистральные городские/общегородского значения — 49
-- **2**: Магистральные районного значения — 37
-- **3**: Местного значения/жилые — 26
-- **4**: Служебные проезды — 16
-- **5**: Пешеходные/территории, пригодные для проезда — 5
+### Default Speed Profile (km/h)
+- **1**: Urban arterial / primary roads — 49
+- **2**: Secondary / district roads — 37
+- **3**: Local / residential streets — 26
+- **4**: Service / access roads — 16
+- **5**: Pedestrian paths / drivable non-roads — 5
 
-Эти значения используются для назначения скорости на рёбрах графа OSM в зависимости от `highway`-тега.
+These values are used to assign speeds to OSM graph edges based on the `highway` tag.
 
-| Группа | OSM highway                  | Скорость (км/ч) |
-|--------|------------------------------|-----------------|
-| 1      | trunk, motorway(+_link), primary(+_link) | 49 |
-| 2      | secondary(+_link), unclassified          | 37 |
-| 3      | tertiary(+_link), residential, living_street | 26 |
-| 4      | road, service, track                    | 16 |
-| 5      | footway, path, pedestrian, steps, cycleway, bridleway, corridor | 5 |
+| Group | OSM highway                  | Speed (km/h) |
+|-------|------------------------------|--------------|
+| 1     | trunk, motorway(+_link), primary(+_link) | 49 |
+| 2     | secondary(+_link), unclassified          | 37 |
+| 3     | tertiary(+_link), residential, living_street | 26 |
+| 4     | road, service, track                    | 16 |
+| 5     | footway, path, pedestrian, steps, cycleway, bridleway, corridor | 5 |
 
-### Советы и ограничения
-- **Полнота OSM**: точность маршрутов зависит от актуальности/полноты данных OpenStreetMap в интересующей области.
-- **Загрузка графа**: при больших экстентах увеличивайте буфер с осторожностью — это влияет на объём графа и время расчётов.
-- **CRS**: алгоритмы корректно преобразуют координаты, однако исходные слои должны иметь валидные СК.
-- **OSMnx**: при отсутствии/ошибке загрузки будет показано информативное сообщение; убедитесь, что пакеты установлены в среде QGIS.
+### Tips and Limitations
+- **OSM Completeness**: Route accuracy depends on the completeness and recency of OpenStreetMap data in your area of interest.
+- **Graph Loading**: For large extents, increase the buffer cautiously — it affects graph size and computation time.
+- **CRS**: Algorithms handle coordinate transformations correctly, but input layers must have valid CRS definitions.
+- **OSMnx**: If the graph fails to load, a clear error message will appear; ensure required packages are installed in the QGIS Python environment.
 
-### Примеры результатов
-- Ближайшая станция: точечный/полигональный слой объектов с атрибутами времени/расстояния и названием станции.
-- Маршруты: линейный слой с маршрутами и атрибутами времени/длины для связок объект–станция.
-- Все подразделения (по рангам): слой объектов с агрегированными метриками (`first/last/avg_arrival_min`) и списком станций.
+### Example Outputs
+- Nearest station: point/polygon layer with time/distance attributes and station name.
+- Routes: line layer with routes and time/distance attributes for each object–station pair.
+- All stations by rank: layer with aggregated metrics (`first/last/avg_arrival_min`) and a list of responding stations.
 
 <p>
-  <img src="docs/images/nearest_flow.svg" alt="Алгоритм ближайшей станции" width="820" />
+  <img src="docs/images/nearest_flow.svg" alt="Nearest Station Algorithm" width="820" />
 </p>
 
-#### Оценка покрытия
+#### Coverage Assessment
 <p>
-  <img src="docs/images/coverage_ranks.svg" alt="Градации покрытия по времени прибытия" width="820" />
+  <img src="docs/images/coverage_ranks.svg" alt="Response Time Coverage by Fire Rank" width="820" />
 </p>
 
-### Обратная связь и исходники
-- Репозиторий: `[GitHub]` (`https://github.com/Moroz-Froze/arrivel-time-calculator`)
-- Отчёты об ошибках/предложения: `[Issues]` (`https://github.com/Moroz-Froze/arrivel-time-calculator/issues`)
+### Feedback and Source Code
+- Repository: `[GitHub]` (`https://github.com/Moroz-Froze/arrivel-time-calculator`)
+- Bug reports / feature requests: `[Issues]` (`https://github.com/Moroz-Froze/arrivel-time-calculator/issues`)
 
-### Журнал изменений
-- 1.1.0 — Fire Response 1.0: добавлены OSM‑маршруты и анализ покрытия; 3 алгоритма, модуль графа OSM, автоопределение поля названия станции, улучшенные атрибуты выходных слоёв.
+### Changelog
+- 1.1.0 — Fire Response 1.0: added OSM routing and coverage analysis; 3 algorithms, OSM graph module, automatic station name field detection, enhanced output attributes.
 
-### Лицензия
-См. файл `LICENSE` (если присутствует) или описание лицензии в метаданных плагина.
+### License
+See the `LICENSE` file (if present) or the license information in the plugin metadata.
 
 

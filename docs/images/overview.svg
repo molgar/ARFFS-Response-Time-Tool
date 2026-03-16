@@ -16,9 +16,9 @@
 
   <!-- Inputs -->
   <rect class="box" x="40" y="60" width="280" height="90" rx="8"/>
-  <text x="60" y="88" class="title">Входные слои</text>
-  <text x="60" y="112" class="text">• Объекты (точки/полигоны)</text>
-  <text x="60" y="136" class="text">• Пожарные подразделения (точки)</text>
+  <text x="60" y="88" class="title">Input Layers</text>
+  <text x="60" y="112" class="text">• Incident objects (points/polygons)</text>
+  <text x="60" y="136" class="text">• Fire stations (points)</text>
 
   <!-- Graph utils -->
   <rect class="box" x="340" y="40" width="280" height="130" rx="8"/>
@@ -30,21 +30,21 @@
   <!-- Algorithms -->
   <rect class="box" x="680" y="20" width="260" height="90" rx="8"/>
   <text x="690" y="48" class="title">nearest_fire_station</text>
-  <text x="690" y="72" class="text muted">Ближайшая по времени</text>
+  <text x="690" y="72" class="text muted">Nearest by travel time</text>
 
   <rect class="box" x="680" y="130" width="260" height="90" rx="8"/>
   <text x="690" y="158" class="title">response_time_routes</text>
-  <text x="690" y="182" class="text muted">Маршруты OSM</text>
+  <text x="690" y="182" class="text muted">OSM routes</text>
 
   <rect class="box" x="680" y="240" width="260" height="90" rx="8"/>
   <text x="690" y="268" class="title">all_stations_response</text>
-  <text x="690" y="292" class="text muted">Покрытие по рангам</text>
+  <text x="690" y="292" class="text muted">Coverage by rank</text>
 
   <!-- Outputs -->
   <rect class="box" x="40" y="240" width="240" height="90" rx="8"/>
-  <text x="60" y="268" class="title">Выходные слои</text>
-  <text x="60" y="292" class="text">• Атрибуты времени/длины</text>
-  <text x="60" y="314" class="text">• Маршруты и сводные метрики</text>
+  <text x="60" y="268" class="title">Output Layers</text>
+  <text x="60" y="292" class="text">• Time/distance attributes</text>
+  <text x="60" y="314" class="text">• Routes and summary metrics</text>
 
   <!-- Arrows -->
   <line class="arrow" x1="320" y1="105" x2="340" y2="105" />
