@@ -1,152 +1,234 @@
 [![English](https://img.shields.io/badge/language-English-blue)](README.md)
-## Fire Response Time Analysis (QGIS Plugin)
+## ARFFS Response Time Analysis (QGIS Plugin)
 
 <p align="center">
-  <img src="docs/images/hero_fire.svg" alt="Fire Response — Hero" width="100%" />
+  <img src="docs/images/hero_fire.svg" alt="ARFFS Response Time — Hero" width="100%" />
 </p>
 
 <p align="center">
   <a href="https://github.com/Moroz-Froze/arrivel-time-calculator" target="_blank">
-    <img src="docs/images/btn_download.svg" alt="Download" />
+    <img src="docs/images/btn_download.svg" alt="Скачать" />
   </a>
   &nbsp;
-  <a href="#usage">
-    <img src="docs/images/btn_docs.svg" alt="Docs" />
+  <a href="#использование">
+    <img src="docs/images/btn_docs.svg" alt="Документация" />
   </a>
   &nbsp;
   <a href="https://github.com/Moroz-Froze/arrivel-time-calculator/issues" target="_blank">
-    <img src="docs/images/btn_issues.svg" alt="Issues" />
+    <img src="docs/images/btn_issues.svg" alt="Проблемы" />
   </a>
 </p>
 
-A QGIS 3.x plugin for fire response time analysis: identifying the nearest fire station by travel time, generating OSM-based routes, and evaluating coverage based on fire incident ranks.
+Плагин QGIS 3.x для анализа времени реагирования **Аварийно-спасательной и противопожарной службы аэродрома (ARFFS)** в соответствии с требованиями **ICAO Annex 14**. Включает физическое моделирование динамики транспортных средств (ускорение, торможение, ограничение скорости на поворотах), цветовую карту изохрон дорожной сети и настраиваемые профили типовых машин ARFFS.
 
 <p align="center">
-  <img src="docs/images/feature_cards.svg" alt="Key Features" width="100%" />
+  <img src="docs/images/feature_cards.svg" alt="Ключевые возможности" width="100%" />
 </p>
 
-### Features
-- **Nearest Fire Station (nearest_fire_station)**:
-  - Identifies the nearest fire station based on the shortest travel time over the OSM road network.
-  - Output attributes: `nearest_station`, `distance_km`, `response_time_min`, `station_x`, `station_y` + original object attributes.
-- **Response Time Routes (response_time_routes)**:
-  - Generates linear routes on the OSM road graph between incident locations and fire stations.
-  - Modes: to the nearest station only; to all stations; to all stations within a specified time threshold.
-  - Output attributes: `object_id`, `station_name`, `distance_km`, `response_time_min`, `object_type`, `route_type`.
-- **All Stations Response by Fire Rank (all_stations_response)**:
-  - Evaluates response times from multiple fire stations based on fire rank (1–5) and a configurable station limit.
-  - Calculates `first_arrival_min`, `last_arrival_min`, `avg_arrival_min`, generates a `station_list`, and provides a `response_coverage` assessment.
+### Возможности
 
-### How It Works
-- Internally uses the `graph_utils.py` module to:
-  - Build an OSM road graph based on the extent of your input layers (with a small buffer),
-  - Assign travel speeds by road type and compute travel time on graph edges,
-  - Convert speeds from km/h to m/min.
-- Algorithms automatically detect the station name field in the fire stations layer.
-- Supports project coordinate reference systems (CRS): route geometries are automatically converted to/from WGS84.
+- **Изохроны времени реагирования ARFFS (`arffs_isochrone`)**:
+  - Генерация цветовых полигонов дорожной сети, отображающих зоны времени реагирования от станций ARFFS.
+  - **Зелёный**: < 2 минут (требование ICAO — первая машина).
+  - **Оранжевый**: 2-3 минуты (требование ICAO — все машины).
+  - **Красный**: > 3 минут (превышение норматива ICAO).
+  - Разделение рёбер графа на границах временных порогов для точного определения зон.
 
-<details>
-<summary>Speed Profile and OSM Graph</summary>
+- **Ближайшая пожарная станция (`nearest_fire_station`)**:
+  - Определение ближайшей станции ARFFS по кратчайшему времени проезда с учётом физической модели.
+  - Атрибуты: `nearest_station`, `distance_km`, `response_time_min`, `station_x`, `station_y` + исходные атрибуты объекта.
 
-- `graph_utils.py` constructs the road graph from the input layer extents with a buffer.
-- The `set_graph_travel_times` function assigns speeds and populates the `travel_time` attribute on edges.
-- Default speeds are defined for groups of OSM `highway` tags (see table below).
+- **Маршруты времени реагирования (`response_time_routes`)**:
+  - Построение маршрутов между объектами инцидентов и станциями ARFFS.
+  - Режимы: только до ближайшей станции; до всех станций; до всех станций в пределах временного порога.
+  - Атрибуты: `object_id`, `station_name`, `distance_km`, `response_time_min`, `object_type`, `route_type`.
 
-</details>
+- **Анализ реагирования всех станций (`all_stations_response`)**:
+  - Одновременная оценка времени реагирования по всем рангам:
+    - Ранг 1: 1 единица, Ранг 1-бис: 2 единицы, Ранг 2: 3 единицы, Ранг 3: 4 единицы, Ранг 4: 5 единиц, Ранг 5: 6 единиц.
+  - Атрибуты по рангам: `rank_N_min`, `rank_N_max`, `rank_N_avg`.
+  - Общая статистика: `arrival_time_min`, `arrival_time_max`, `arrival_time_mean`.
+  - Оценка по ICAO (`evaluation`): "satisfactory" (первая единица <= 2 мин и среднее <= 3 мин), "marginal" или "unsatisfactory".
+
+- **Матрица времени прибытия (`arrival_time_matrix`)**:
+  - Расчёт времени прибытия от всех пожарных подразделений ко всем целевым объектам.
+  - Результат: слой объектов со столбцами времени прибытия для каждого подразделения.
+
+- **Первое прибывающее подразделение (`first_arrival_unit`)**:
+  - Обработка матрицы прибытия для определения первого прибывающего подразделения.
+  - Результат: `first_unit` (название станции) и `first_time` (минуты).
+
+### Физическая модель времени проезда
+
+Все алгоритмы используют **трапецеидальный профиль скорости**, моделирующий реалистичную динамику транспортного средства:
+
+1. **Время активации** — настраиваемая задержка от сигнала тревоги до выезда (по умолчанию: 1.0 мин).
+2. **Фаза разгона** — транспортное средство ускоряется от начальной скорости до крейсерской.
+3. **Фаза крейсерского движения** — движение с максимальной скоростью дороги (ограниченной максимальной скоростью ТС).
+4. **Фаза торможения** — снижение скорости для поворотов или остановки.
+
+Углы поворота на перекрёстках вычисляются по геометрии дорог, применяются ограничения скорости на кривых:
+
+| Угол отклонения | Коэффициент | Описание |
+|---|---|---|
+| 0-15° | 100% | Прямая дорога |
+| 15-45° | 80% | Плавный поворот |
+| 45-90° | 50% | Умеренный поворот |
+| 90-135° | 30% | Крутой поворот |
+| 135-180° | 15% | Разворот / почти остановка |
+
+### Профили транспортных средств
+
+| Транспортное средство | Макс. скорость (км/ч) | Ускорение (м/с²) | Торможение (м/с²) |
+|---|---|---|---|
+| Rosenbauer Panther 6x6 | 105 | 2.0 | 3.5 |
+| Oshkosh Striker 3000 | 113 | 1.8 | 3.5 |
+| Oshkosh Striker 6x6 | 113 | 1.6 | 3.0 |
+| E-One Titan HPR | 100 | 1.7 | 3.2 |
+| Пользовательский | Задаётся | Задаётся | Задаётся |
+
+### Параметры транспортного средства
+
+Все алгоритмы принимают следующие физические параметры:
+
+| Параметр | Диапазон | По умолчанию | Описание |
+|---|---|---|---|
+| Время активации | 0-5 мин | 1.0 | Задержка тревога-выезд |
+| Макс. скорость | 10-200 км/ч | 105 | Максимальная скорость ТС |
+| Ускорение | 0.5-5.0 м/с² | 2.0 | Темп разгона |
+| Торможение | 1.0-8.0 м/с² | 3.5 | Темп торможения |
 
 <p align="center">
-  <img src="docs/images/overview.svg" alt="Plugin Workflow Overview" width="860" />
+  <img src="docs/images/overview.svg" alt="Обзор работы плагина" width="860" />
   <br/>
-  <sub>Input layers → OSM graph → algorithms → output layers</sub>
+  <sub>Входные слои → Граф дорог → Физическая модель → Алгоритмы → Выходные слои</sub>
 </p>
 
-### Requirements
-- QGIS: 3.16 – 3.99
-- Internet access (required to fetch OSM road graph via OSMnx)
-- Python dependencies in the QGIS environment: `osmnx`, `networkx` (usually `shapely` is already included with QGIS)
+### Скорости по умолчанию для ARFFS (км/ч)
 
-### Installing Dependencies (Windows, OSGeo4W/QGIS)
-1) Open the **OSGeo4W Shell** (or **QGIS Python Console**).
-2) Install the packages (specify versions compatible with your QGIS/Python build if needed):
+Эти скорости применяются при использовании пользовательских слоёв аэродромных дорог:
+
+| Тип дороги | Скорость (км/ч) |
+|---|---|
+| ВПП (runway) | 80 |
+| Периметровая дорога (perimeter road) | 70 |
+| Рулёжная дорожка (taxiway) | 60 |
+| Подъездная дорога (access road) | 50 |
+| Служебная дорога (service) | 40 |
+| Перрон (apron) | 30 |
+| Прочее (other) | 30 |
+
+При использовании дорожных сетей на основе OSM доступны также следующие скорости:
+
+| Теги OSM `highway` | Скорость (км/ч) |
+|---|---|
+| trunk, motorway(+_link), primary(+_link) | 49 |
+| secondary(+_link), unclassified | 37 |
+| tertiary(+_link), residential, living_street | 26 |
+| road, service, track | 16 |
+| footway, path, pedestrian, steps, cycleway, bridleway, corridor | 5 |
+
+### Требования
+- QGIS: 3.16 - 3.99
+- Доступ в интернет (для загрузки графа дорог OSM через OSMnx, если не используется собственный слой дорог)
+- Python-зависимости в среде QGIS: `osmnx`, `networkx` (`shapely` обычно уже включён в QGIS)
+
+### Установка зависимостей (Windows, OSGeo4W/QGIS)
+1. Откройте **OSGeo4W Shell** (или **Консоль Python QGIS**).
+2. Установите пакеты:
 
 ```bash
 python -m pip install --upgrade pip
 python -m pip install "osmnx>=1.4,<2.0" "networkx>=2.6,<3.0"
-# If compatibility issues arise, try pinning versions:
+# При проблемах совместимости попробуйте фиксированные версии:
 # python -m pip install osmnx==1.6.0 networkx==2.8.8
 ```
 
-If you're behind a proxy or on a corporate network, add `--proxy` flags or configure environment variables beforehand.
+При работе через прокси-сервер добавьте флаги `--proxy` или настройте переменные окружения.
 
-### Plugin Installation
-- Copy the plugin folder `fire_analysis_plugin` into your QGIS profile plugins directory.
-  Example (Windows):
+### Установка плагина
+- Скопируйте папку плагина в каталог плагинов вашего профиля QGIS.
+  Пример (Windows):
   - `C:\Users\<USER>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\fire_analysis_plugin`
-- Restart QGIS and enable the plugin via **Plugins → Manage and Install Plugins**.
+- Перезапустите QGIS и активируйте плагин через **Модули -> Управление и установка модулей**.
 
-### Usage
-1) Load into your project an incident layer (points/polygons) and a fire stations layer (points).
-2) Open **Processing Toolbox** → group `Fire Response Analysis`.
-3) Run the desired algorithm and configure parameters:
-   - `Incident layer`, `Fire stations layer` — input data.
-   - `Average speeds / Speed profile` — optional; defaults are used if not provided.
-   - For routes: choose a mode and, if applicable, set a time threshold.
-4) Save the output layer (point/polygon for nearest station; line for routes; same geometry type as input for all-stations-by-rank analysis).
+### Использование
+1. Загрузите в проект:
+   - **Слой станций ARFFS** (точки) — расположение пожарно-спасательных станций.
+   - **Слой дорожной сети** (линии) — аэродромные дороги, рулёжные дорожки или сеть на базе OSM.
+   - По необходимости **слой объектов/инцидентов** (точки или полигоны) для алгоритмов кроме изохрон.
+2. Откройте **Панель инструментов обработки** -> группа **ARFFS Response Time Analysis**.
+3. Запустите нужный алгоритм и настройте параметры:
+   - Выберите **профиль транспортного средства** или задайте пользовательские физические параметры.
+   - Установите **время активации** (задержка от тревоги до выезда).
+   - Для маршрутов: выберите режим и, при необходимости, временной порог.
+4. Выходные слои:
+   - **Изохроны**: Полигональный слой с цветовыми зонами (зелёный/оранжевый/красный).
+   - **Ближайшая станция**: Точечный/полигональный слой с атрибутами времени реагирования.
+   - **Маршруты**: Линейный слой с геометрией маршрутов и атрибутами времени/расстояния.
+   - **Анализ всех станций**: Слой с метриками по рангам и оценкой ICAO.
+   - **Матрица прибытия**: Слой объектов со столбцами времени прибытия по подразделениям.
+   - **Первое подразделение**: Слой с названием первого подразделения и временем прибытия.
 
 <p align="center">
-  <img src="docs/images/steps_pipeline.svg" alt="Execution Steps" width="100%" />
+  <img src="docs/images/steps_pipeline.svg" alt="Шаги выполнения" width="100%" />
 </p>
 
-#### Route Generation Modes
+#### Режимы генерации маршрутов
 <p>
-  <img src="docs/images/routes_modes.svg" alt="Route Generation Modes" width="820" />
+  <img src="docs/images/routes_modes.svg" alt="Режимы генерации маршрутов" width="820" />
 </p>
 
-### Default Speed Profile (km/h)
-- **1**: Urban arterial / primary roads — 49
-- **2**: Secondary / district roads — 37
-- **3**: Local / residential streets — 26
-- **4**: Service / access roads — 16
-- **5**: Pedestrian paths / drivable non-roads — 5
+### Критерии оценки ICAO Annex 14
 
-These values are used to assign speeds to OSM graph edges based on the `highway` tag.
+Алгоритм «Анализ реагирования всех станций» оценивает покрытие по критериям ICAO Annex 14:
 
-| Group | OSM highway                  | Speed (km/h) |
-|-------|------------------------------|--------------|
-| 1     | trunk, motorway(+_link), primary(+_link) | 49 |
-| 2     | secondary(+_link), unclassified          | 37 |
-| 3     | tertiary(+_link), residential, living_street | 26 |
-| 4     | road, service, track                    | 16 |
-| 5     | footway, path, pedestrian, steps, cycleway, bridleway, corridor | 5 |
+- **Satisfactory (удовлетворительно)**: Первая единица прибывает в течение 2 минут И среднее время <= 3 минут.
+- **Marginal (допустимо)**: Первая единица прибывает в течение 3 минут, но критерии "satisfactory" не выполнены.
+- **Unsatisfactory (неудовлетворительно)**: Время прибытия первой единицы превышает 3 минуты.
 
-### Tips and Limitations
-- **OSM Completeness**: Route accuracy depends on the completeness and recency of OpenStreetMap data in your area of interest.
-- **Graph Loading**: For large extents, increase the buffer cautiously — it affects graph size and computation time.
-- **CRS**: Algorithms handle coordinate transformations correctly, but input layers must have valid CRS definitions.
-- **OSMnx**: If the graph fails to load, a clear error message will appear; ensure required packages are installed in the QGIS Python environment.
+### Рекомендации и ограничения
+- **Пользовательские слои дорог**: Для наилучших результатов на аэродромах используйте собственный слой дорожной сети с атрибутами типов дорог, а не данные OSM.
+- **Полнота OSM**: При использовании сетей OSM точность маршрутов зависит от полноты данных OpenStreetMap в вашем регионе.
+- **Загрузка графа**: Для больших территорий увеличивайте буфер с осторожностью — это влияет на размер графа и время вычислений.
+- **CRS**: Алгоритмы автоматически обрабатывают преобразование координат, но входные слои должны иметь корректно определённую систему координат.
+- **Двунаправленные дороги**: Рёбра аэродромных дорог по умолчанию считаются двунаправленными.
 
-### Example Outputs
-- Nearest station: point/polygon layer with time/distance attributes and station name.
-- Routes: line layer with routes and time/distance attributes for each object–station pair.
-- All stations by rank: layer with aggregated metrics (`first/last/avg_arrival_min`) and a list of responding stations.
+### Примеры результатов
+- **Изохроны**: Цветовой полигональный слой с зонами зелёного (<2 мин), оранжевого (2-3 мин) и красного (>3 мин) цвета вокруг станций ARFFS.
+- **Ближайшая станция**: Точечный/полигональный слой с атрибутами `nearest_station`, `response_time_min` и расстоянием.
+- **Маршруты**: Линейный слой с геометрией маршрутов и временем реагирования по парам объект-станция.
+- **Все станции по рангам**: Слой с атрибутами `rank_1_min/max/avg` по `rank_5_min/max/avg`, `arrival_time_min/max/mean` и `evaluation`.
 
 <p>
-  <img src="docs/images/nearest_flow.svg" alt="Nearest Station Algorithm" width="820" />
+  <img src="docs/images/nearest_flow.svg" alt="Алгоритм ближайшей станции" width="820" />
 </p>
 
-#### Coverage Assessment
+#### Оценка покрытия
 <p>
-  <img src="docs/images/coverage_ranks.svg" alt="Response Time Coverage by Fire Rank" width="820" />
+  <img src="docs/images/coverage_ranks.svg" alt="Оценка покрытия по рангам" width="820" />
 </p>
 
-### Feedback and Source Code
-- Repository: `[GitHub]` (`https://github.com/Moroz-Froze/arrivel-time-calculator`)
-- Bug reports / feature requests: `[Issues]` (`https://github.com/Moroz-Froze/arrivel-time-calculator/issues`)
+### Обратная связь и исходный код
+- Репозиторий: [GitHub](https://github.com/Moroz-Froze/arrivel-time-calculator)
+- Баг-репорты / запросы функций: [Issues](https://github.com/Moroz-Froze/arrivel-time-calculator/issues)
 
-### Changelog
-- 1.1.0 — Fire Response 1.0: added OSM routing and coverage analysis; 3 algorithms, OSM graph module, automatic station name field detection, enhanced output attributes.
+### История изменений
+- **v2.0.0 — ARFFS Response Analysis**:
+  - Добавлен алгоритм изохрон ARFFS с цветовой индикацией дорожных сегментов.
+  - Добавлена физическая модель времени проезда (трапецеидальный профиль скорости).
+  - Добавлено моделирование ускорения и торможения.
+  - Добавлены ограничения скорости на поворотах.
+  - Добавлен параметр времени активации (от тревоги до выезда).
+  - Добавлены профили транспортных средств (Rosenbauer Panther 6x6, Oshkosh Striker 3000, Oshkosh Striker 6x6, E-One Titan HPR).
+  - Добавлены типы дорог ARFFS (ВПП, рулёжная дорожка, перрон, периметровая дорога).
+  - Добавлена поддержка двунаправленных рёбер для аэродромных дорог.
+  - Обновлены пороги оценки в соответствии с ICAO Annex 14 (2 мин / 3 мин).
+  - Все существующие алгоритмы обновлены с учётом физических параметров.
+- **v1.1.0 — Fire Response 1.0**:
+  - Добавлен алгоритм расчёта матрицы времени прибытия.
+  - Добавлен алгоритм определения первого прибывающего подразделения.
+  - Добавлены маршрутизация по OSM и анализ покрытия; 3 алгоритма, модуль графа OSM, автоматическое определение поля названия станции.
 
-### License
-See the `LICENSE` file (if present) or the license information in the plugin metadata.
-
-
+### Лицензия
+См. файл `LICENSE` (если присутствует) или информацию о лицензии в метаданных плагина.
