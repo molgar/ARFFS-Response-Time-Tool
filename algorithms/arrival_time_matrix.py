@@ -42,8 +42,12 @@ try:
 except ImportError:
     OSMNX_AVAILABLE = False
 
-from .genesis.genesis.swiss_knife import DELAY_TIME
-from ..graph_tools import get_graph_from_layer
+from ..physics_model import (
+    set_physics_travel_times,
+    VEHICLE_PRESETS,
+    ARFFS_DEFAULT_SPEEDS_KMH,
+)
+from ..graph_utils import build_graph_from_road_layer
 
 
 class ATM_Algorithm(QgsProcessingAlgorithm):
@@ -60,7 +64,7 @@ class ATM_Algorithm(QgsProcessingAlgorithm):
     FIRE_UNITS = 'FIRE_UNITS'
     UNITS_NAME_FIELD = 'UNITS_NAME_FIELD'
     BUILDINGS = 'BUILDINGS'
-
+    ACTIVATION_TIME = 'ACTIVATION_TIME'
 
     # Output
     OUTPUT = 'OUTPUT'
@@ -183,6 +187,17 @@ class ATM_Algorithm(QgsProcessingAlgorithm):
             optional=True
         ))
 
+        # Activation time (replaces the old genesis DELAY_TIME constant)
+        from qgis.core import QgsProcessingParameterNumber
+        self.addParameter(QgsProcessingParameterNumber(
+            self.ACTIVATION_TIME,
+            self.tr('Activation time (minutes) — alarm to departure'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=1.0,
+            minValue=0.0,
+            maxValue=5.0,
+        ))
+
         # Output buildings layer
         self.addParameter(QgsProcessingParameterFileDestination(
                 self.OUTPUT, self.tr('Arrival matrix (buildings with arrival times)'), 'Geopackage file (*.gpkg)',
@@ -212,6 +227,7 @@ class ATM_Algorithm(QgsProcessingAlgorithm):
         target_layer         = self.parameterAsSource(parameters, self.BUILDINGS, context)
 
         target_file          = self.parameterAsFile(parameters, self.OUTPUT, context)
+        activation_time      = self.parameterAsDouble(parameters, self.ACTIVATION_TIME, context)
 
 
         # 1. Prepare source data
@@ -220,9 +236,16 @@ class ATM_Algorithm(QgsProcessingAlgorithm):
 
         # 1.1. Build road network graph
         feedback.setProgressText('Building road network graph...')
-        pre_gds_file = self.PRE_GDS_PATH.format(road_network_source.id())
-        feedback.pushDebugInfo(f'Graph path: {pre_gds_file}')
-        G = get_graph_from_layer(pre_gds_file, road_network_source, feedback)
+
+        # Build graph from road layer using graph_utils (replaces genesis dependency)
+        G, to_wgs, from_wgs = build_graph_from_road_layer(
+            road_network_source,
+            existed_units_layer if hasattr(existed_units_layer, 'extent') else road_network_source,
+            existed_units_layer if hasattr(existed_units_layer, 'extent') else road_network_source,
+        )
+
+        # Apply physics-based travel times
+        set_physics_travel_times(G, road_speeds_kmh=dict(ARFFS_DEFAULT_SPEEDS_KMH))
 
         ## Project graph to local CRS
         G = ox.project_graph(G)
@@ -283,7 +306,7 @@ class ATM_Algorithm(QgsProcessingAlgorithm):
         for node, unit_name in existed_units_dict.items():
             times = nx.single_source_dijkstra_path_length(G, node, weight=weight_field)
             times = pd.Series(times, name = unit_name)
-            times = times+DELAY_TIME
+            times = times + activation_time
 
             # Join buildings with arrival times
             target_layer_gdf = target_layer_gdf.merge(times,

@@ -1,6 +1,6 @@
 """
 Utilities for building OSM road graphs and computing travel times
-based on road types and speeds for fire vehicles.
+based on road types and speeds for fire/ARFFS vehicles.
 """
 
 from typing import List, Tuple, Optional
@@ -28,6 +28,8 @@ from qgis.core import (
 )
 from shapely.geometry import box as shapely_box
 from math import sqrt
+
+from .physics_model import ARFFS_DEFAULT_SPEEDS_KMH
 
 
 def find_nearest_node(graph: "nx.MultiDiGraph", lon: float, lat: float) -> Optional[int]:
@@ -107,6 +109,13 @@ def set_graph_travel_times(
     else:
         s1, s2, s3, s4, s5 = [morph_function(kmh) for kmh in speeds]
 
+    warnings.warn(
+        "set_graph_travel_times() uses a simple time=distance/speed model. "
+        "For ARFFS analysis, use physics_model.set_physics_travel_times() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     # Speed map by OSM highway tags
     sp = {
         "trunk": s1,
@@ -132,6 +141,12 @@ def set_graph_travel_times(
         "cycleway": s5,
         "bridleway": s5,
         "corridor": s5,
+        # ARFFS aerodrome road types
+        "runway": s1,
+        "taxiway": s2,
+        "perimeter_road": s2,
+        "apron": s4,
+        "access_road": s3,
     }
 
     # Assign speed and travel time to each edge
@@ -322,11 +337,27 @@ def build_graph_from_road_layer(
                 R = 6371000  # Earth radius in metres
                 segment_length = R * c
 
+                # Store geometry coordinates for visualization and angle computation
+                geom_coords = [
+                    (prev_point.x(), prev_point.y()),
+                    (lon, lat),
+                ]
+
+                # Add forward edge
                 G.add_edge(
                     prev_node_id,
                     node_id,
                     highway=highway_type,
-                    length=segment_length
+                    length=segment_length,
+                    geometry_coords=geom_coords,
+                )
+                # Add reverse edge (bidirectional for ARFFS vehicles)
+                G.add_edge(
+                    node_id,
+                    prev_node_id,
+                    highway=highway_type,
+                    length=segment_length,
+                    geometry_coords=list(reversed(geom_coords)),
                 )
 
             prev_node_id = node_id

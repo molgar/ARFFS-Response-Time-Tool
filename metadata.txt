@@ -1,15 +1,27 @@
 [general]
-name=Fire Response Time Analysis
+name=ARFFS Response Time Analysis
 qgisMinimumVersion=3.16
 qgisMaximumVersion=3.99
-description=Fire department response time analysis
-version=1.1.0
+description=Aerodrome Fire and Rescue Service (ARFFS) response time analysis with physics-based vehicle dynamics and isochrone generation
+version=2.0.0
 author=Fire Analysis Team
 email=fire@example.com
 
-about=A plugin for analyzing fire department response times. Includes response time estimation from existing stations, generation of response time route vector layers, and response time analysis for all stations based on various fire incident ranks.
+about=A QGIS plugin for analyzing Aerodrome Fire and Rescue Service (ARFFS) response times per ICAO Annex 14 requirements. Features include physics-based travel time modeling (acceleration, deceleration, curve speed limits), color-coded isochrone road maps (green <2min, orange 2-3min, red >3min), configurable vehicle presets (Rosenbauer Panther, Oshkosh Striker), and support for custom aerodrome road networks (taxiways, aprons, perimeter roads).
 
 changelog=
+    2.0.0:
+    - Added ARFFS isochrone algorithm with color-coded road segment output
+    - Added physics-based travel time model (trapezoidal velocity profile)
+    - Added acceleration and deceleration modeling
+    - Added curve speed limits based on turn sharpness
+    - Added activation time parameter (alarm to departure)
+    - Added vehicle presets (Rosenbauer Panther 6x6, Oshkosh Striker 3000, etc.)
+    - Added ARFFS road types (runway, taxiway, apron, perimeter_road)
+    - Added bidirectional edge support for aerodrome roads
+    - Updated evaluation thresholds to ICAO Annex 14 (2 min / 3 min)
+    - Fixed broken genesis module dependency in arrival time matrix
+    - Retrofitted all existing algorithms with physics parameters
     1.1.0:
     - Added arrival time matrix calculation algorithm
     - Added first arrival unit response time algorithm
@@ -19,7 +31,7 @@ repository=https://github.com/example/fire-analysis-plugin
 homepage=https://github.com/example/fire-analysis-plugin
 
 hasProcessingProvider=yes
-tags=fire, emergency, response, time, analysis, firefighting
+tags=arffs, aerodrome, fire, rescue, emergency, response, time, analysis, isochrone, icao, airport
 category=Analysis
 icon=icon.png
 experimental=False

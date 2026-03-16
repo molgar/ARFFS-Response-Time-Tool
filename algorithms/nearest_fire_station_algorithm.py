@@ -17,6 +17,13 @@ from ..graph_utils import (
     DEFAULT_SPEEDS_KMH,
     find_nearest_node,
 )
+from ..physics_model import (
+    VEHICLE_PRESETS,
+    ARFFS_DEFAULT_SPEEDS_KMH,
+    set_physics_travel_times,
+    set_standstill_start,
+    restore_edge_weights,
+)
 import os
 import importlib
 import math
@@ -36,6 +43,12 @@ class NearestFireStationAlgorithm(QgsProcessingAlgorithm):
     ROAD_SPEEDS_KMH = 'ROAD_SPEEDS_KMH'
     USE_CACHE = 'USE_CACHE'
     OUTPUT_LAYER = 'OUTPUT_LAYER'
+    # ARFFS vehicle physics parameters
+    VEHICLE_PRESET = 'VEHICLE_PRESET'
+    ACTIVATION_TIME = 'ACTIVATION_TIME'
+    MAX_SPEED_KMH = 'MAX_SPEED_KMH'
+    ACCELERATION_RATE = 'ACCELERATION_RATE'
+    DECELERATION_RATE = 'DECELERATION_RATE'
 
     def tr(self, string):
         """Translate string"""
@@ -117,6 +130,49 @@ class NearestFireStationAlgorithm(QgsProcessingAlgorithm):
                 self.tr('Use graph caching'),
                 options=[self.tr('Yes'), self.tr('No')],
                 defaultValue=0
+            )
+        )
+
+        # --- ARFFS vehicle physics parameters ---
+        preset_names = list(VEHICLE_PRESETS.keys()) + ['Custom']
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                self.VEHICLE_PRESET,
+                self.tr('Vehicle preset'),
+                options=preset_names,
+                defaultValue=0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ACTIVATION_TIME,
+                self.tr('Activation time (minutes)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=1.0, minValue=0.0, maxValue=5.0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.MAX_SPEED_KMH,
+                self.tr('Vehicle max speed (km/h)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=105.0, minValue=10.0, maxValue=200.0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ACCELERATION_RATE,
+                self.tr('Acceleration (m/s²)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=2.0, minValue=0.5, maxValue=5.0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.DECELERATION_RATE,
+                self.tr('Deceleration (m/s²)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=3.5, minValue=1.0, maxValue=8.0,
             )
         )
 
@@ -237,7 +293,28 @@ class NearestFireStationAlgorithm(QgsProcessingAlgorithm):
         except RuntimeError as e:
             raise QgsProcessingException(self.tr(str(e)))
 
-        set_graph_travel_times(G, speeds_kmh, kmh_to_mm)
+        # --- Resolve vehicle physics parameters ---
+        activation_time = self.parameterAsDouble(parameters, self.ACTIVATION_TIME, context)
+        max_speed_kmh = self.parameterAsDouble(parameters, self.MAX_SPEED_KMH, context)
+        accel = self.parameterAsDouble(parameters, self.ACCELERATION_RATE, context)
+        decel = self.parameterAsDouble(parameters, self.DECELERATION_RATE, context)
+
+        preset_idx = self.parameterAsInt(parameters, self.VEHICLE_PRESET, context)
+        preset_names = list(VEHICLE_PRESETS.keys()) + ['Custom']
+        if preset_idx < len(VEHICLE_PRESETS):
+            preset = VEHICLE_PRESETS[preset_names[preset_idx]]
+            max_speed_kmh = preset['max_speed_kmh']
+            accel = preset['acceleration_ms2']
+            decel = preset['deceleration_ms2']
+            activation_time = preset['activation_time_min']
+
+        set_physics_travel_times(
+            G,
+            vehicle_max_speed_kmh=max_speed_kmh,
+            acceleration_ms2=accel,
+            deceleration_ms2=decel,
+            road_speeds_kmh=dict(ARFFS_DEFAULT_SPEEDS_KMH),
+        )
 
         # Process each incident object
         total_features = objects_layer.featureCount()
@@ -332,7 +409,7 @@ class NearestFireStationAlgorithm(QgsProcessingAlgorithm):
             if nearest_station_feature is not None:
                 station_name_field = self._detect_station_name_field(fire_stations_layer)
                 station_name = nearest_station_feature[station_name_field] if station_name_field else f"Station_{nearest_station_id}"
-                response_time_min = round(best_time_min, 2)
+                response_time_min = round(best_time_min + activation_time, 2)
                 station_point = nearest_station_feature.geometry().asPoint()
 
                 # Create new feature

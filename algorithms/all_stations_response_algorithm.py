@@ -21,6 +21,11 @@ from ..graph_utils import (
     DEFAULT_SPEEDS_KMH,
     find_nearest_node,
 )
+from ..physics_model import (
+    VEHICLE_PRESETS,
+    ARFFS_DEFAULT_SPEEDS_KMH,
+    set_physics_travel_times,
+)
 
 
 class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
@@ -37,6 +42,12 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
     ROAD_SPEEDS_KMH = 'ROAD_SPEEDS_KMH'
     USE_CACHE = 'USE_CACHE'
     OUTPUT_LAYER = 'OUTPUT_LAYER'
+    # ARFFS vehicle physics parameters
+    VEHICLE_PRESET = 'VEHICLE_PRESET'
+    ACTIVATION_TIME = 'ACTIVATION_TIME'
+    MAX_SPEED_KMH = 'MAX_SPEED_KMH'
+    ACCELERATION_RATE = 'ACCELERATION_RATE'
+    DECELERATION_RATE = 'DECELERATION_RATE'
 
     def tr(self, string):
         """Translate string"""
@@ -125,6 +136,49 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
         )
 
         # Note: algorithm calculates all fire ranks simultaneously
+
+        # --- ARFFS vehicle physics parameters ---
+        preset_names = list(VEHICLE_PRESETS.keys()) + ['Custom']
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                self.VEHICLE_PRESET,
+                self.tr('Vehicle preset'),
+                options=preset_names,
+                defaultValue=0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ACTIVATION_TIME,
+                self.tr('Activation time (minutes)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=1.0, minValue=0.0, maxValue=5.0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.MAX_SPEED_KMH,
+                self.tr('Vehicle max speed (km/h)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=105.0, minValue=10.0, maxValue=200.0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ACCELERATION_RATE,
+                self.tr('Acceleration (m/s²)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=2.0, minValue=0.5, maxValue=5.0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.DECELERATION_RATE,
+                self.tr('Deceleration (m/s²)'),
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=3.5, minValue=1.0, maxValue=8.0,
+            )
+        )
 
         # Output layer
         self.addParameter(
@@ -257,7 +311,28 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
         except RuntimeError as e:
             raise QgsProcessingException(self.tr(str(e)))
 
-        set_graph_travel_times(G, speeds_kmh, kmh_to_mm)
+        # --- Resolve vehicle physics parameters ---
+        activation_time = self.parameterAsDouble(parameters, self.ACTIVATION_TIME, context)
+        max_speed_kmh = self.parameterAsDouble(parameters, self.MAX_SPEED_KMH, context)
+        accel = self.parameterAsDouble(parameters, self.ACCELERATION_RATE, context)
+        decel = self.parameterAsDouble(parameters, self.DECELERATION_RATE, context)
+
+        preset_idx = self.parameterAsInt(parameters, self.VEHICLE_PRESET, context)
+        preset_names = list(VEHICLE_PRESETS.keys()) + ['Custom']
+        if preset_idx < len(VEHICLE_PRESETS):
+            preset = VEHICLE_PRESETS[preset_names[preset_idx]]
+            max_speed_kmh = preset['max_speed_kmh']
+            accel = preset['acceleration_ms2']
+            decel = preset['deceleration_ms2']
+            activation_time = preset['activation_time_min']
+
+        set_physics_travel_times(
+            G,
+            vehicle_max_speed_kmh=max_speed_kmh,
+            acceleration_ms2=accel,
+            deceleration_ms2=decel,
+            road_speeds_kmh=dict(ARFFS_DEFAULT_SPEEDS_KMH),
+        )
 
         station_name_field = self._detect_station_name_field(fire_stations_layer)
         fire_stations = list(fire_stations_layer.getFeatures())
@@ -365,11 +440,11 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
             obj_id = obj_data['id']
             obj_node = obj_data['node']
 
-            # Get arrival times for this node from all stations
+            # Get arrival times for this node from all stations (including activation time)
             station_times = []
             for station_name in station_nodes.keys():
                 if obj_node in arrival_times_matrix.get(station_name, {}):
-                    time_min = arrival_times_matrix[station_name][obj_node]
+                    time_min = arrival_times_matrix[station_name][obj_node] + activation_time
                     station_times.append({
                         'name': station_name,
                         'response_time_min': time_min
@@ -432,10 +507,13 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
             new_feature['arrival_time_max'] = round(arrival_time_max, 1) if arrival_time_max != float('inf') else None
             new_feature['arrival_time_mean'] = round(arrival_time_mean, 1) if arrival_time_mean != float('inf') else None
 
-            # Assessment based on mean arrival time (compared against 10-minute threshold)
+            # Assessment based on ICAO Annex 14 response time requirements
+            # First vehicle: 2 min, all vehicles: 3 min
             if arrival_time_mean != float('inf') and arrival_time_mean is not None:
-                if arrival_time_mean <= 10:
+                if arrival_time_min != float('inf') and arrival_time_min <= 2.0 and arrival_time_mean <= 3.0:
                     evaluation = "satisfactory"
+                elif arrival_time_min != float('inf') and arrival_time_min <= 3.0:
+                    evaluation = "marginal"
                 else:
                     evaluation = "unsatisfactory"
             else:

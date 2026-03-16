@@ -1,5 +1,6 @@
 """
-Processing algorithms provider for fire department response time analysis
+Processing algorithms provider for ARFFS (Aerodrome Fire and Rescue Service)
+response time analysis.
 """
 
 from qgis.core import QgsProcessingProvider
@@ -11,21 +12,22 @@ from .algorithms.response_time_routes_algorithm import ResponseTimeRoutesAlgorit
 from .algorithms.all_stations_response_algorithm import AllStationsResponseAlgorithm
 from .algorithms.arrival_time_matrix import ATM_Algorithm
 from .algorithms.first_arrival_unit import FirstArrivalUnitAlgorithm
+from .algorithms.isochrone_algorithm import ARFFSIsochroneAlgorithm
 
 
 class FireResponseAnalysisProvider(QgsProcessingProvider):
-    """Processing algorithms provider for fire response analysis"""
+    """Processing algorithms provider for ARFFS response time analysis"""
 
     def __init__(self):
         super().__init__()
 
     def id(self):
         """Unique provider identifier"""
-        return 'fire_response_analysis'
+        return 'arffs_response_analysis'
 
     def name(self):
         """Provider name"""
-        return 'Fire Response Time Analysis'
+        return 'ARFFS Response Time Analysis'
 
     def icon(self):
         """Provider icon"""
@@ -33,10 +35,11 @@ class FireResponseAnalysisProvider(QgsProcessingProvider):
 
     def longName(self):
         """Full provider name"""
-        return 'Fire Response Time Analysis'
+        return 'ARFFS Response Time Analysis'
 
     def loadAlgorithms(self):
         """Load all algorithms"""
+        self.addAlgorithm(ARFFSIsochroneAlgorithm())
         self.addAlgorithm(NearestFireStationAlgorithm())
         self.addAlgorithm(ResponseTimeRoutesAlgorithm())
         self.addAlgorithm(AllStationsResponseAlgorithm())
