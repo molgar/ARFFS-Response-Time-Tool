@@ -138,6 +138,8 @@ class NearestFireStationAlgorithm(QgsProcessingAlgorithm):
         speeds_kmh = parameters.get(self.ROAD_SPEEDS_KMH, DEFAULT_SPEEDS_KMH)
         if not isinstance(speeds_kmh, list) or len(speeds_kmh) != 5:
             speeds_kmh = DEFAULT_SPEEDS_KMH
+        elif not all(isinstance(s, (int, float)) and 0 < s <= 300 for s in speeds_kmh):
+            speeds_kmh = DEFAULT_SPEEDS_KMH
 
         if objects_layer is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.OBJECTS_LAYER))
@@ -203,7 +205,7 @@ class NearestFireStationAlgorithm(QgsProcessingAlgorithm):
                             from qgis.utils import iface
                             if iface:
                                 msg.setParent(iface.mainWindow())
-                        except:
+                        except Exception:
                             pass
 
                         msg.exec_()

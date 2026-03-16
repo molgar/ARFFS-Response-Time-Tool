@@ -6,7 +6,6 @@ based on road types and speeds for fire vehicles.
 from typing import List, Tuple, Optional
 import os
 import hashlib
-import pickle
 import warnings
 
 try:
@@ -153,7 +152,7 @@ def set_graph_travel_times(
 def _get_cache_key(extent: QgsRectangle, buffer_m: float) -> str:
     """Generate a cache key based on extent and buffer"""
     key_str = f"{extent.xMinimum()}_{extent.yMinimum()}_{extent.xMaximum()}_{extent.yMaximum()}_{buffer_m}"
-    return hashlib.md5(key_str.encode()).hexdigest()
+    return hashlib.sha256(key_str.encode()).hexdigest()
 
 
 def _get_cache_path() -> str:
@@ -161,6 +160,10 @@ def _get_cache_path() -> str:
     plugin_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cache_dir = os.path.join(plugin_dir, 'cache')
     os.makedirs(cache_dir, exist_ok=True)
+    try:
+        os.chmod(cache_dir, 0o700)
+    except OSError:
+        pass  # Windows does not support chmod
     return cache_dir
 
 
@@ -170,12 +173,11 @@ def load_graph_from_cache(cache_key: str) -> Optional["nx.MultiDiGraph"]:
         return None
 
     cache_dir = _get_cache_path()
-    cache_file = os.path.join(cache_dir, f"graph_{cache_key}.pkl")
+    cache_file = os.path.join(cache_dir, f"graph_{cache_key}.graphml")
 
     if os.path.exists(cache_file):
         try:
-            with open(cache_file, 'rb') as f:
-                return pickle.load(f)
+            return ox.load_graphml(cache_file)
         except Exception:
             return None
     return None
@@ -187,11 +189,10 @@ def save_graph_to_cache(graph: "nx.MultiDiGraph", cache_key: str) -> bool:
         return False
 
     cache_dir = _get_cache_path()
-    cache_file = os.path.join(cache_dir, f"graph_{cache_key}.pkl")
+    cache_file = os.path.join(cache_dir, f"graph_{cache_key}.graphml")
 
     try:
-        with open(cache_file, 'wb') as f:
-            pickle.dump(graph, f)
+        ox.save_graphml(graph, cache_file)
         return True
     except Exception:
         return False

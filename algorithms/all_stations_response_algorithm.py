@@ -144,6 +144,8 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
         speeds_kmh = parameters.get(self.ROAD_SPEEDS_KMH, DEFAULT_SPEEDS_KMH)
         if not isinstance(speeds_kmh, list) or len(speeds_kmh) != 5:
             speeds_kmh = DEFAULT_SPEEDS_KMH
+        elif not all(isinstance(s, (int, float)) and 0 < s <= 300 for s in speeds_kmh):
+            speeds_kmh = DEFAULT_SPEEDS_KMH
 
         if objects_layer is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.OBJECTS_LAYER))
@@ -226,7 +228,7 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
                             from qgis.utils import iface
                             if iface:
                                 msg.setParent(iface.mainWindow())
-                        except:
+                        except Exception:
                             pass
 
                         msg.exec_()
@@ -277,7 +279,7 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
                 station_name = station[station_name_field] if station_name_field else f"Station_{station.id()}"
                 station_nodes[station_name] = st_node
             except Exception as e:
-                feedback.reportError(self.tr(f'Could not find node for station {station.id()}: {str(e)}'))
+                feedback.reportError(self.tr(f'Could not find node for station {station.id()}'))
                 continue
 
         if len(station_nodes) == 0:
@@ -348,7 +350,7 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
                 arrival_times_matrix[station_name] = arrival_times_filtered
                 feedback.pushInfo(self.tr(f'{progress_pct}% : {station_name}... OK'))
             except Exception as e:
-                feedback.reportError(self.tr(f'Error computing for {station_name}: {str(e)}'))
+                feedback.reportError(self.tr(f'Error computing arrival times for station: {station_name}'))
                 arrival_times_matrix[station_name] = {}
 
         # Step 4: Process objects using the matrix for all ranks
