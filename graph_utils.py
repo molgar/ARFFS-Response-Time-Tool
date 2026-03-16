@@ -177,7 +177,7 @@ def load_graph_from_cache(cache_key: str) -> Optional["nx.MultiDiGraph"]:
 
     if os.path.exists(cache_file):
         try:
-            return nx.MultiDiGraph(nx.read_graphml(cache_file, node_type=int))
+            return ox.load_graphml(cache_file)
         except Exception:
             return None
     return None
@@ -192,7 +192,7 @@ def save_graph_to_cache(graph: "nx.MultiDiGraph", cache_key: str) -> bool:
     cache_file = os.path.join(cache_dir, f"graph_{cache_key}.graphml")
 
     try:
-        nx.write_graphml(graph, cache_file)
+        ox.save_graphml(graph, cache_file)
         return True
     except Exception:
         return False

@@ -134,7 +134,7 @@ class OSMnxInstallDialog(QDialog):
             QMessageBox.warning(
                 self,
                 "Error",
-                f"Installation file not found: {bat_file}\n\n"
+                "Installation file (install_osmnx.bat) not found in the plugin directory.\n\n"
                 "Please install osmnx manually."
             )
             return

@@ -279,7 +279,7 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
                 station_name = station[station_name_field] if station_name_field else f"Station_{station.id()}"
                 station_nodes[station_name] = st_node
             except Exception as e:
-                feedback.reportError(self.tr(f'Could not find node for station {station.id()}: {str(e)}'))
+                feedback.reportError(self.tr(f'Could not find node for station {station.id()}'))
                 continue
 
         if len(station_nodes) == 0:
@@ -350,7 +350,7 @@ class AllStationsResponseAlgorithm(QgsProcessingAlgorithm):
                 arrival_times_matrix[station_name] = arrival_times_filtered
                 feedback.pushInfo(self.tr(f'{progress_pct}% : {station_name}... OK'))
             except Exception as e:
-                feedback.reportError(self.tr(f'Error computing for {station_name}: {str(e)}'))
+                feedback.reportError(self.tr(f'Error computing arrival times for station: {station_name}'))
                 arrival_times_matrix[station_name] = {}
 
         # Step 4: Process objects using the matrix for all ranks
