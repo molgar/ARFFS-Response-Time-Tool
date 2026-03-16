@@ -28,8 +28,8 @@
   </g>
 
   <text x="120" y="170" class="h1">Fire Response Time Analysis</text>
-  <text x="120" y="210" class="p">Маршруты и покрытие прибытия пожарных подразделений на графе OSM</text>
-  <text x="120" y="240" class="p">QGIS 3.16+ · Быстро · Воспроизводимо</text>
+  <text x="120" y="210" class="p">Response time routing and coverage for fire units on the OSM graph</text>
+  <text x="120" y="240" class="p">QGIS 3.16+ · Fast · Reproducible</text>
 </svg>
 
 

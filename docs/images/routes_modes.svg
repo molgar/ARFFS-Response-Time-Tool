@@ -11,19 +11,19 @@
   </defs>
 
   <rect class="lane" x="40" y="30" width="880" height="80" rx="8"/>
-  <text x="60" y="60" class="label">Только к ближайшей станции</text>
-  <text x="60" y="82" class="muted">Строится один маршрут: объект → ближайшая по времени станция</text>
+  <text x="60" y="60" class="label">To nearest station only</text>
+  <text x="60" y="82" class="muted">One route built: object → nearest station by travel time</text>
   <path class="route" stroke="#2563eb" d="M460,90 C520,20 700,20 820,70"/>
 
   <rect class="lane" x="40" y="130" width="880" height="80" rx="8"/>
-  <text x="60" y="160" class="label">Ко всем станциям</text>
-  <text x="60" y="182" class="muted">Строятся маршруты ко всем доступным станциям</text>
+  <text x="60" y="160" class="label">To all stations</text>
+  <text x="60" y="182" class="muted">Routes built to all available stations</text>
   <path class="route" stroke="#16a34a" d="M460,190 C540,110 700,110 820,150"/>
   <path class="route" stroke="#16a34a" d="M460,190 C520,140 720,220 860,200"/>
 
   <rect class="lane" x="40" y="230" width="880" height="80" rx="8"/>
-  <text x="60" y="260" class="label">Ко всем станциям в радиусе времени</text>
-  <text x="60" y="282" class="muted">Порог по времени, например 30 мин</text>
+  <text x="60" y="260" class="label">To all stations within time threshold</text>
+  <text x="60" y="282" class="muted">Time threshold, e.g. 30 min</text>
   <path class="route" stroke="#ea580c" d="M460,290 C520,260 720,260 860,280"/>
 </svg>
 
